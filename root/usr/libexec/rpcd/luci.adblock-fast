@@ -48,7 +48,7 @@ get_file_url_filesizes() {
 	json_close_object
 	json_dump
 	json_cleanup
-	uci_changes "$name" && uci_commit "$name"
+	[ -n "$(uci_changes "$name")" ] && uci_commit "$name"
 }
 
 get_init_list() {

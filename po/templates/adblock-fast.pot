@@ -415,6 +415,14 @@ msgstr ""
 msgid "Let local devices use their own DNS servers if set"
 msgstr ""
 
+#: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:524
+msgid "Name"
+msgstr ""
+
+#: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:515
+msgid "Name/URL"
+msgstr ""
+
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:252
 msgid "No AdBlock on SmartDNS"
 msgstr ""
@@ -607,7 +615,7 @@ msgstr ""
 msgid "The principal package (adblock-fast) is outdated, please update it"
 msgstr ""
 
-#: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:515
+#: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:528
 msgid "URL"
 msgstr ""
 
@@ -621,6 +629,7 @@ msgid "URLs to file(s) containing lists to be allowed or blocked."
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:493
+#: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:520
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/status/include/70_adblock-fast.js:83
 msgid "Unknown"
 msgstr ""
