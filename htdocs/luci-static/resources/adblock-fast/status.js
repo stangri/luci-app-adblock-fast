@@ -306,6 +306,9 @@ var status = baseclass.extend({
 						errorDeletingDataFile: _("failed to delete data file %s"),
 						errorRestoringBackupFile: _("failed to restore backup file %s"),
 						errorNoOutputFile: _("failed to create final block-list %s"),
+						errorNoHeartbeat: _(
+							"Heartbeat domain is not accessible after resolver restart"
+						),
 					};
 					var errorsTitle = E(
 						"label",
