@@ -16,7 +16,7 @@ var pkg = {
 	},
 	get URL() {
 		return (
-			"https://docs.openwrt.melmac.net/" + pkg.Name + "/" + pkg.ReadmeCompat
+			"https://docs.openwrt.melmac.ca/" + pkg.Name + "/" + pkg.ReadmeCompat
 		);
 	},
 	humanFileSize: function (bytes, si = false, dp = 2) {
