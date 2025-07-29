@@ -27,18 +27,18 @@ msgstr ""
 msgid "Active"
 msgstr ""
 
-#: applications/luci-app-adblock-fast/root/usr/share/luci/menu.d/luci-app-adblock-fast.json:3
-msgid "AdBlock Fast"
-msgstr ""
-
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:186
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:250
-msgid "AdBlock on all instances"
+msgid "Ad-blocking on all instances"
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:187
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:251
-msgid "AdBlock on select instances"
+msgid "Ad-blocking on select instances"
+msgstr ""
+
+#: applications/luci-app-adblock-fast/root/usr/share/luci/menu.d/luci-app-adblock-fast.json:3
+msgid "AdBlock Fast"
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/status/include/70_adblock-fast.js:10
@@ -432,11 +432,11 @@ msgid "Name/URL"
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:252
-msgid "No AdBlock on SmartDNS"
+msgid "No Ad-blocking on SmartDNS"
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:188
-msgid "No AdBlock on dnsmasq"
+msgid "No Ad-blocking on dnsmasq"
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/adblock-fast/status.js:298
@@ -472,11 +472,11 @@ msgid "Pick the LED not already used in %sSystem LED Configuration%s."
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:280
-msgid "Pick the SmartDNS instance(s) for AdBlocking"
+msgid "Pick the SmartDNS instance(s) for ad-blocking"
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:217
-msgid "Pick the dnsmasq instance(s) for AdBlocking"
+msgid "Pick the dnsmasq instance(s) for ad-blocking"
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:61
@@ -655,11 +655,11 @@ msgid "Unknown warning"
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:242
-msgid "Use AdBlocking on the SmartDNS instance(s)"
+msgid "Use ad-blocking on the SmartDNS instance(s)"
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:178
-msgid "Use AdBlocking on the dnsmasq instance(s)"
+msgid "Use ad-blocking on the dnsmasq instance(s)"
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/adblock-fast/status.js:198
@@ -689,13 +689,13 @@ msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:244
 msgid ""
-"You can limit the AdBlocking to the specific SmartDNS instance(s) (%smore "
+"You can limit the ad-blocking to the specific SmartDNS instance(s) (%smore "
 "information%s)."
 msgstr ""
 
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/view/adblock-fast/overview.js:180
 msgid ""
-"You can limit the AdBlocking to the specific dnsmasq instance(s) (%smore "
+"You can limit the ad-blocking to the specific dnsmasq instance(s) (%smore "
 "information%s)."
 msgstr ""
 

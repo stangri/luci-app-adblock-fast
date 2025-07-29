@@ -202,7 +202,7 @@ get_init_status() {
 		json_add_boolean 'outputGzipExists' '0'
 	fi
 	json_add_array 'leds'
-		for i in /sys/class/leds/*; do json_add_string '' "$(basename "$i")"; done
+		for i in /sys/class/leds/*; do [ -e "$i" ] || continue; json_add_string '' "$(basename "$i")"; done
 	json_close_array
 	json_close_object
 	json_dump
