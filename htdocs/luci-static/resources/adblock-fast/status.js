@@ -210,6 +210,10 @@ var status = baseclass.extend({
 							"Invalid compressed cache directory '%s'"
 						),
 						warningFreeRamCheckFail: _("Can't detect free RAM"),
+						warningSanityCheckTLD: _("Sanity check discovered TLDs in %s"),
+						warningSanityCheckLeadingDot: _(
+							"Sanity check discovered leading dots in %s"
+						),
 					};
 					var warningsTitle = E(
 						"label",
