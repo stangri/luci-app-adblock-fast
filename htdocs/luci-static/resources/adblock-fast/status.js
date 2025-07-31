@@ -143,7 +143,9 @@ var status = baseclass.extend({
 						reply.ubus.packageCompat,
 						pkg.LuciCompat,
 						reply.status.rpcdCompat,
-						'<a href="' + pkg.URL + '#version_mismatch" target="_blank">',
+						'<a href="' +
+							pkg.URL +
+							'#internal_version_mismatch" target="_blank">',
 						"</a>",
 					],
 				});
