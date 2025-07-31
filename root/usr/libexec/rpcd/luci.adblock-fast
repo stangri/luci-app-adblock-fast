@@ -9,6 +9,7 @@
 # ubus -S call luci.adblock-fast getInitList '{"name": "adblock-fast" }'
 # ubus -S call luci.adblock-fast getInitStatus '{"name": "adblock-fast" }'
 # ubus -S call luci.adblock-fast getPlatformSupport '{"name": "adblock-fast" }'
+# ubus -S call luci.adblock-fast getUbusInfo '{"name": "adblock-fast" }'
 # ubus -S call luci.adblock-fast setInitAction '{"name": "adblock-fast", "action": "start" }'
 # ubus -S call luci.adblock-fast setInitAction '{"name": "adblock-fast", "action": "dl" }'
 # ubus -S call luci.adblock-fast setInitAction '{"name": "adblock-fast", "action": "pause" }'
