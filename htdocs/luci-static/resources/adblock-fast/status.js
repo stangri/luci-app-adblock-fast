@@ -25,6 +25,17 @@ var pkg = {
 			(pkg.ReadmeCompat ? pkg.ReadmeCompat + "/" : "")
 		);
 	},
+	isVersionMismatch: function (luci, pkg, rpcd) {
+		return luci !== pkg || pkg !== rpcd || luci !== rpcd;
+	},
+	formatMessage: function (info, template) {
+		if (!template) return _("Unknown message") + "<br />";
+		return (
+			(Array.isArray(info)
+				? template.format(...info)
+				: template.format(info || " ")) + "<br />"
+		);
+	},
 	humanFileSize: function (bytes, si = false, dp = 2) {
 		return `%${si ? 1000 : 1024}.${dp ?? 0}mB`.format(bytes);
 	},
@@ -133,9 +144,11 @@ var status = baseclass.extend({
 			};
 
 			if (
-				pkg.LuciCompat !== reply.status.packageCompat ||
-				reply.status.packageCompat !== reply.status.rpcdCompat ||
-				pkg.LuciCompat !== reply.status.rpcdCompat
+				pkg.isVersionMismatch(
+					pkg.LuciCompat,
+					reply.status.packageCompat,
+					reply.status.rpcdCompat
+				)
 			) {
 				reply.ubus.warnings.push({
 					code: "warningInternalVersionMismatch",
@@ -261,10 +274,7 @@ var status = baseclass.extend({
 				var text = "";
 				reply.ubus.warnings.forEach((element) => {
 					if (element.code && warningTable[element.code]) {
-						text += Array.isArray(element.info)
-							? warningTable[element.code].format(...element.info) + "<br />"
-							: warningTable[element.code].format(element.info || " ") +
-							  "<br />";
+						text += pkg.formatMessage(element.info, warningTable[element.code]);
 					} else {
 						text += _("Unknown warning") + "<br />";
 					}
@@ -357,9 +367,7 @@ var status = baseclass.extend({
 				var text = "";
 				reply.ubus.errors.forEach((element) => {
 					if (element.code && errorTable[element.code]) {
-						text += Array.isArray(element.info)
-							? errorTable[element.code].format(...element.info) + "<br />"
-							: errorTable[element.code].format(element.info || " ") + "<br />";
+						text += pkg.formatMessage(element.info, errorTable[element.code]);
 					} else {
 						text += _("Unknown error") + "<br />";
 					}
