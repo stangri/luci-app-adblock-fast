@@ -101,10 +101,7 @@ get_init_status() {
 	local name
 	name="$(basename "$1")"
 	name="${name:-$packageName}"
-	local ports dns outputFile outputCache outputGzip outputConfig
-	local i j k
-# shellcheck disable=SC2034
-	local compressed_cache_dir
+	local ports dns outputFile outputCache outputGzip outputConfig compressed_cache_dir i
 	config_load "$name"
 	config_get compressed_cache_dir 'config' 'compressed_cache_dir' '/etc'
 	compressed_cache_dir="$(sanitize_dir "$compressed_cache_dir")"
