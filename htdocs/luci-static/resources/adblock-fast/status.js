@@ -297,7 +297,7 @@ var status = baseclass.extend({
 						text += _("Unknown warning") + "<br />";
 					}
 				});
-				var warningsText = E("div", {}, text);
+				var warningsText = E("div", { class: "cbi-value-description" }, text);
 				var warningsField = E(
 					"div",
 					{ class: "cbi-value-field" },
@@ -394,7 +394,7 @@ var status = baseclass.extend({
 					'<a href="' + pkg.URL + '" target="_blank">',
 					"</a>!<br />"
 				);
-				var errorsText = E("div", {}, text);
+				var errorsText = E("div", { class: "cbi-value-description" }, text);
 				var errorsField = E("div", { class: "cbi-value-field" }, errorsText);
 				errorsDiv = E("div", { class: "cbi-value" }, [
 					errorsTitle,
