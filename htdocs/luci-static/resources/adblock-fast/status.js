@@ -12,7 +12,7 @@ var pkg = {
 		return "adblock-fast";
 	},
 	get LuciCompat() {
-		return 7;
+		return 8;
 	},
 	get ReadmeCompat() {
 		return "";
@@ -185,6 +185,8 @@ var status = baseclass.extend({
 				statusDownloading: _("Downloading lists"),
 				statusFail: _("Failed to start"),
 				statusSuccess: _("Active"),
+				statusTriggerBootWait: _("Waiting for trigger (on_boot)"),
+				statusTriggerStartWait: _("Waiting for trigger (on_start)"),
 			};
 
 			var header = E("h2", {}, _("AdBlock-Fast - Status"));
