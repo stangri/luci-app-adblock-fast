@@ -647,7 +647,7 @@ var status = baseclass.extend({
 RPC.on("setInitAction", function (reply) {
 	// Don't immediately hide modal and reload
 	// Instead, poll status until the operation actually completes
-	pollServiceStatus(function (success, status) {
+	pollServiceStatus(function () {
 		ui.hideModal();
 		location.reload();
 	});
