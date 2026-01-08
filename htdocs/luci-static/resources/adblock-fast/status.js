@@ -31,7 +31,7 @@ var pkg = {
 			pkg.Name +
 			"/" +
 			(pkg.ReadmeCompat ? pkg.ReadmeCompat + "/" : "") +
-			"#Donate"
+			"#donate"
 		);
 	},
 	isVersionMismatch: function (luci, pkg, rpcd) {
