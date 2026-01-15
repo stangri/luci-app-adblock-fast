@@ -229,12 +229,6 @@ get_platform_support() {
 	json_cleanup
 }
 
-get_ubus_info() {
-	local name
-	name="$(basename "$1")"
-	name="${name:-$packageName}"
-	ubus call service list '{"name":"'"$name"'"}'
-}
 
 case "$1" in
 	list)
@@ -249,9 +243,6 @@ case "$1" in
 			json_add_string 'name' 'name'
 		json_close_object
 		json_add_object "getPlatformSupport"
-			json_add_string 'name' 'name'
-		json_close_object
-		json_add_object "getUbusInfo"
 			json_add_string 'name' 'name'
 		json_close_object
 		json_add_object "setInitAction"
@@ -290,13 +281,6 @@ case "$1" in
 				json_get_var name 'name'
 				json_cleanup
 				get_platform_support "$name"
-				;;
-			getUbusInfo)
-				read -r input
-				json_load "$input"
-				json_get_var name 'name'
-				json_cleanup
-				get_ubus_info "$name"
 				;;
 			setInitAction)
 				read -r input

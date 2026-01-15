@@ -11,8 +11,10 @@
 					"getFileUrlFilesizes",
 					"getInitList",
 					"getInitStatus",
-					"getPlatformSupport",
-					"getUbusInfo"
+					"getPlatformSupport"
+				],
+				"service": [
+					"list"
 				]
 			},
 			"uci": [
