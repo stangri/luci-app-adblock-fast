@@ -34,20 +34,20 @@ jobs:
           #   target: mips_24kc
           # - version: openwrt-24.10
           #   target: mipsel_24kc
-          - version: snapshots
+          - version: openwrt-25.12
             target: x86_64
             suffix: noarch
-          # - version: snapshots
+          # - version: openwrt-25.12
           #   target: aarch64_cortex-a53
-          # - version: snapshots
+          # - version: openwrt-25.12
           #   target: aarch64_generic
-          # - version: snapshots
+          # - version: openwrt-25.12
           #   target: arm_cortex-a7
-          # - version: snapshots
+          # - version: openwrt-25.12
           #   target: arm_cortex-a9
-          # - version: snapshots
+          # - version: openwrt-25.12
           #   target: mips_24kc
-          # - version: snapshots
+          # - version: openwrt-25.12
           #   target: mipsel_24kc
 
     steps:
