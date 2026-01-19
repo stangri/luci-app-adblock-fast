@@ -356,7 +356,7 @@ return view.extend({
 			"auto_update_enabled",
 			_("Automatic List Update"),
 			_(
-				"Enable scheduled redownload of block lists using /etc/init.d/adblock-fast dl."
+				"Enable scheduled list redownloads via /etc/init.d/adblock-fast dl."
 			)
 		);
 		o.value("0", _("Disable"));
@@ -369,6 +369,7 @@ return view.extend({
 			"auto_update_mode",
 			_("Schedule Type")
 		);
+		o.description = _("Select how often the update should run.");
 		o.value("daily", _("Daily"));
 		o.value("weekly", _("Weekly"));
 		o.value("monthly", _("Monthly"));
@@ -381,7 +382,8 @@ return view.extend({
 			"tab_advanced",
 			form.ListValue,
 			"auto_update_hour",
-			_("Update Hour")
+			_("Update Hour"),
+			_("Hour of day to run the update (0-23).")
 		);
 		for (var i = 0; i < 24; i++) {
 			var hourLabel = i < 10 ? "0" + i : "" + i;
@@ -397,7 +399,10 @@ return view.extend({
 			"tab_advanced",
 			form.ListValue,
 			"auto_update_minute",
-			_("Update Minute")
+			_("Update Minute"),
+			_(
+				"Minute of hour to run the update (0-59). In 'Every N hours' mode, updates run at the selected minute within each interval."
+			)
 		);
 		for (var i = 0; i < 60; i++) {
 			var minuteLabel = i < 10 ? "0" + i : "" + i;
@@ -410,7 +415,8 @@ return view.extend({
 			"tab_advanced",
 			form.ListValue,
 			"auto_update_weekday",
-			_("Day of Week")
+			_("Day of Week"),
+			_("Run on the selected weekday.")
 		);
 		o.value("0", _("Sunday"));
 		o.value("1", _("Monday"));
@@ -426,7 +432,8 @@ return view.extend({
 			"tab_advanced",
 			form.ListValue,
 			"auto_update_monthday",
-			_("Day of Month")
+			_("Day of Month"),
+			_("Run on the selected day of month.")
 		);
 		for (var i = 1; i <= 31; i++) {
 			o.value(String(i), String(i));
@@ -438,7 +445,8 @@ return view.extend({
 			"tab_advanced",
 			form.ListValue,
 			"auto_update_every_ndays",
-			_("Every N days")
+			_("Every N days"),
+			_("Run once every N days.")
 		);
 		for (var i = 1; i <= 31; i++) {
 			o.value(String(i), String(i));
@@ -450,7 +458,8 @@ return view.extend({
 			"tab_advanced",
 			form.ListValue,
 			"auto_update_every_nhours",
-			_("Every N hours")
+			_("Every N hours"),
+			_("Run once every N hours.")
 		);
 		for (var i = 1; i <= 23; i++) {
 			o.value(String(i), String(i));
