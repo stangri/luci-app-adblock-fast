@@ -62,7 +62,7 @@ update_cron() {
 
 	if [ -f "$cron_file" ]; then
 		if [ -s "$cron_file" ]; then
-			grep -v -E 'adblock-fast[[:space:]]+dl' "$cron_file" > "$tmp_file" || true
+			grep -v -E '/etc/init\.d/adblock-fast[[:space:]]+dl' "$cron_file" > "$tmp_file" || true
 		else
 			: > "$tmp_file"
 		fi
