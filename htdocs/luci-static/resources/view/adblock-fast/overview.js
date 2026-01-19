@@ -6,6 +6,7 @@
 "use strict";
 "require form";
 "require view";
+"require ui";
 "require adblock-fast.status as adb";
 
 var pkg = adb.pkg;
@@ -352,6 +353,114 @@ return view.extend({
 		o = s1.taboption(
 			"tab_advanced",
 			form.ListValue,
+			"auto_update_enabled",
+			_("Automatic List Update"),
+			_(
+				"Enable scheduled redownload of block lists using /etc/init.d/adblock-fast dl."
+			)
+		);
+		o.value("0", _("Disable"));
+		o.value("1", _("Enable"));
+		o.default = "0";
+
+		o = s1.taboption(
+			"tab_advanced",
+			form.ListValue,
+			"auto_update_mode",
+			_("Schedule Type")
+		);
+		o.value("daily", _("Daily"));
+		o.value("weekly", _("Weekly"));
+		o.value("monthly", _("Monthly"));
+		o.value("every_n_days", _("Every N days"));
+		o.value("every_n_hours", _("Every N hours"));
+		o.default = "daily";
+		o.depends("auto_update_enabled", "1");
+
+		o = s1.taboption(
+			"tab_advanced",
+			form.ListValue,
+			"auto_update_hour",
+			_("Update Hour")
+		);
+		for (var i = 0; i < 24; i++) {
+			var hourLabel = i < 10 ? "0" + i : "" + i;
+			o.value(String(i), hourLabel);
+		}
+		o.default = "4";
+		o.depends({ auto_update_enabled: "1", auto_update_mode: "daily" });
+		o.depends({ auto_update_enabled: "1", auto_update_mode: "weekly" });
+		o.depends({ auto_update_enabled: "1", auto_update_mode: "monthly" });
+		o.depends({ auto_update_enabled: "1", auto_update_mode: "every_n_days" });
+
+		o = s1.taboption(
+			"tab_advanced",
+			form.ListValue,
+			"auto_update_minute",
+			_("Update Minute")
+		);
+		for (var i = 0; i < 60; i++) {
+			var minuteLabel = i < 10 ? "0" + i : "" + i;
+			o.value(String(i), minuteLabel);
+		}
+		o.default = "0";
+		o.depends("auto_update_enabled", "1");
+
+		o = s1.taboption(
+			"tab_advanced",
+			form.ListValue,
+			"auto_update_weekday",
+			_("Day of Week")
+		);
+		o.value("0", _("Sunday"));
+		o.value("1", _("Monday"));
+		o.value("2", _("Tuesday"));
+		o.value("3", _("Wednesday"));
+		o.value("4", _("Thursday"));
+		o.value("5", _("Friday"));
+		o.value("6", _("Saturday"));
+		o.default = "0";
+		o.depends({ auto_update_enabled: "1", auto_update_mode: "weekly" });
+
+		o = s1.taboption(
+			"tab_advanced",
+			form.ListValue,
+			"auto_update_monthday",
+			_("Day of Month")
+		);
+		for (var i = 1; i <= 31; i++) {
+			o.value(String(i), String(i));
+		}
+		o.default = "1";
+		o.depends({ auto_update_enabled: "1", auto_update_mode: "monthly" });
+
+		o = s1.taboption(
+			"tab_advanced",
+			form.ListValue,
+			"auto_update_every_ndays",
+			_("Every N days")
+		);
+		for (var i = 1; i <= 31; i++) {
+			o.value(String(i), String(i));
+		}
+		o.default = "3";
+		o.depends({ auto_update_enabled: "1", auto_update_mode: "every_n_days" });
+
+		o = s1.taboption(
+			"tab_advanced",
+			form.ListValue,
+			"auto_update_every_nhours",
+			_("Every N hours")
+		);
+		for (var i = 1; i <= 23; i++) {
+			o.value(String(i), String(i));
+		}
+		o.default = "6";
+		o.depends({ auto_update_enabled: "1", auto_update_mode: "every_n_hours" });
+
+		o = s1.taboption(
+			"tab_advanced",
+			form.ListValue,
 			"ipv6_enabled",
 			_("IPv6 Support"),
 			_("Add IPv6 entries to block-list.")
@@ -531,5 +640,28 @@ return view.extend({
 		o.optional = false;
 
 		return Promise.all([status.render(), m.render()]);
+	},
+
+	handleSave: function (ev) {
+		return this.super("handleSave", [ev]);
+	},
+
+	handleSaveApply: function (ev, mode) {
+		return this.super("handleSave", [ev]).then(function () {
+			var onApplied = function () {
+				L.resolveDefault(adb.syncCron(pkg.Name, "apply"), {
+					result: false,
+				}).then(function (result) {
+					if (!result || result.result === false) {
+						ui.addNotification(
+							null,
+							E("p", {}, _("Failed to update cron schedule."))
+						);
+					}
+				});
+			};
+			document.addEventListener("uci-applied", onApplied, { once: true });
+			ui.changes.apply(mode == "0");
+		});
 	},
 });

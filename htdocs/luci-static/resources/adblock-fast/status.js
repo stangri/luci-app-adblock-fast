@@ -159,6 +159,13 @@ var getFileUrlFilesizes = rpc.declare({
 	params: ["name", "url"],
 });
 
+var syncCron = rpc.declare({
+	object: "luci." + pkg.Name,
+	method: "syncCron",
+	params: ["name", "action"],
+	expect: { result: false },
+});
+
 var getInitList = rpc.declare({
 	object: "luci." + pkg.Name,
 	method: "getInitList",
@@ -658,6 +665,7 @@ return L.Class.extend({
 	pkg: pkg,
 	getInitStatus: getInitStatus,
 	getFileUrlFilesizes: getFileUrlFilesizes,
+	syncCron: syncCron,
 	getPlatformSupport: getPlatformSupport,
 	getServiceInfo: getServiceInfo,
 });

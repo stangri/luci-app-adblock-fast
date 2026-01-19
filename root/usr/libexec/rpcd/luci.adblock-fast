@@ -52,6 +52,96 @@ get_file_url_filesizes() {
 	uci_changes "$name" && uci_commit "$name"
 }
 
+update_cron() {
+	local action="$1"
+	local cron_file="/etc/crontabs/root"
+	local tmp_file
+	local auto_enabled add_line
+
+	tmp_file="$(mktemp /tmp/adblock-fast.cron.XXXXXX)" || return 1
+
+	if [ -f "$cron_file" ]; then
+		if [ -s "$cron_file" ]; then
+			grep -v -E 'adblock-fast[[:space:]]+dl' "$cron_file" > "$tmp_file" || true
+		else
+			: > "$tmp_file"
+		fi
+	else
+		: > "$tmp_file" && touch "$cron_file" || { rm -f "$tmp_file"; return 1; }
+	fi
+
+	auto_enabled="$(uci_get "$packageName" 'config' 'auto_update_enabled' '0')"
+	add_line=0
+	case "$action" in
+		disable|stop)
+			add_line=0
+			;;
+		enable)
+			if [ "$auto_enabled" = "1" ] && is_running "$packageName"; then
+				add_line=1
+			fi
+			;;
+		start)
+			[ "$auto_enabled" = "1" ] && add_line=1
+			;;
+		*)
+			if [ "$auto_enabled" = "1" ] && [ "$(is_enabled "$packageName")" = "1" ] && is_running "$packageName"; then
+				add_line=1
+			fi
+			;;
+	esac
+
+	if [ "$add_line" = "1" ]; then
+		local mode minute hour wday mday ndays nhours dom dow
+		mode="$(uci_get "$packageName" 'config' 'auto_update_mode' 'daily')"
+		minute="$(uci_get "$packageName" 'config' 'auto_update_minute' '0')"
+		hour="$(uci_get "$packageName" 'config' 'auto_update_hour' '4')"
+		wday="$(uci_get "$packageName" 'config' 'auto_update_weekday' '0')"
+		mday="$(uci_get "$packageName" 'config' 'auto_update_monthday' '1')"
+		ndays="$(uci_get "$packageName" 'config' 'auto_update_every_ndays' '3')"
+		nhours="$(uci_get "$packageName" 'config' 'auto_update_every_nhours' '6')"
+		dom="*"
+		dow="*"
+		case "$mode" in
+			weekly)
+				dow="$wday"
+				;;
+			monthly)
+				dom="$mday"
+				;;
+			every_n_days)
+				dom="*/$ndays"
+				;;
+			every_n_hours)
+				hour="*/$nhours"
+				;;
+		esac
+		printf '%s %s %s * %s /etc/init.d/%s dl # adblock-fast-auto\n' "$minute" "$hour" "$dom" "$dow" "$packageName" >> "$tmp_file"
+	fi
+
+	if mv "$tmp_file" "$cron_file"; then
+		chmod 600 "$cron_file" 2>/dev/null
+	else
+		rm -f "$tmp_file"
+		return 1
+	fi
+
+	[ -x /etc/init.d/cron ] && /etc/init.d/cron reload >/dev/null 2>&1
+	return 0
+}
+
+sync_cron() {
+	local name action
+	name="$(basename "$1")"
+	action="$2"
+	[ "$name" = "$packageName" ] || { print_json_bool 'result' '0'; return 1; }
+	if update_cron "$action"; then
+		print_json_bool 'result' '1'
+	else
+		print_json_bool 'result' '0'
+	fi
+}
+
 get_init_list() {
 	local name
 	name="$(basename "$1")"
@@ -89,11 +179,16 @@ set_init_action() {
 			cmd="/etc/init.d/${packageName} ${action}"
 		;;
 	esac
+	local result=0
 	if [ -n "$cmd" ] && eval "$cmd" >/dev/null 2>&1; then
-		print_json_bool 'result' '1'
-	else
-		print_json_bool 'result' '0'
+		result=1
 	fi
+	case "$action" in
+		enable|start|disable|stop)
+			update_cron "$action" || logger -t adblock-fast 'error' 'failed to update cron'
+			;;
+	esac
+	print_json_bool 'result' "$result"
 }
 
 get_init_status() {
@@ -235,6 +330,10 @@ case "$1" in
 		json_add_object "getFileUrlFilesizes"
 			json_add_string 'name' 'name'
 		json_close_object
+		json_add_object "syncCron"
+			json_add_string 'name' 'name'
+			json_add_string 'action' 'action'
+		json_close_object
 		json_add_object "getInitList"
 			json_add_string 'name' 'name'
 		json_close_object
@@ -259,6 +358,14 @@ case "$1" in
 				json_get_var name 'name'
 				json_cleanup
 				get_file_url_filesizes "$name"
+				;;
+			syncCron)
+				read -r input
+				json_load "$input"
+				json_get_var name 'name'
+				json_get_var action 'action'
+				json_cleanup
+				sync_cron "$name" "$action"
 				;;
 			getInitList)
 				read -r input

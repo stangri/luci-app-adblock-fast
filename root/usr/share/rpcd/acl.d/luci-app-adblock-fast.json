@@ -29,6 +29,7 @@
 			],
 			"ubus": {
 				"luci.adblock-fast": [
+					"syncCron",
 					"setInitAction"
 				]
 			}
