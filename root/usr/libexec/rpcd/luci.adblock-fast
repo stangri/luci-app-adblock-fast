@@ -60,6 +60,8 @@ update_cron() {
 
 	tmp_file="$(mktemp /tmp/adblock-fast.cron.XXXXXX)" || return 1
 
+	config_load "$packageName"
+
 	if [ -f "$cron_file" ]; then
 		if [ -s "$cron_file" ]; then
 			grep -v -E '/etc/init.d/adblock-fast[[:space:]]+dl' "$cron_file" > "$tmp_file" || true
@@ -70,7 +72,7 @@ update_cron() {
 		: > "$tmp_file" && touch "$cron_file" || { rm -f "$tmp_file"; return 1; }
 	fi
 
-	auto_enabled="$(uci_get "$packageName" 'config' 'auto_update_enabled' '0')"
+	config_get auto_enabled 'config' 'auto_update_enabled' '0'
 	add_line=0
 	case "$action" in
 		disable|stop)
@@ -93,13 +95,13 @@ update_cron() {
 
 	if [ "$add_line" = "1" ]; then
 		local mode minute hour wday mday ndays nhours dom dow
-		mode="$(uci_get "$packageName" 'config' 'auto_update_mode' 'daily')"
-		minute="$(uci_get "$packageName" 'config' 'auto_update_minute' '0')"
-		hour="$(uci_get "$packageName" 'config' 'auto_update_hour' '4')"
-		wday="$(uci_get "$packageName" 'config' 'auto_update_weekday' '0')"
-		mday="$(uci_get "$packageName" 'config' 'auto_update_monthday' '1')"
-		ndays="$(uci_get "$packageName" 'config' 'auto_update_every_ndays' '3')"
-		nhours="$(uci_get "$packageName" 'config' 'auto_update_every_nhours' '6')"
+		config_get mode 'config' 'auto_update_mode' 'daily'
+		config_get minute 'config' 'auto_update_minute' '0'
+		config_get hour 'config' 'auto_update_hour' '4'
+		config_get wday 'config' 'auto_update_weekday' '0'
+		config_get mday 'config' 'auto_update_monthday' '1'
+		config_get ndays 'config' 'auto_update_every_ndays' '3'
+		config_get nhours 'config' 'auto_update_every_nhours' '6'
 		dom="*"
 		dow="*"
 		case "$mode" in
@@ -150,8 +152,13 @@ get_cron_status() {
 	name="$(basename "$1")"
 	name="${name:-$packageName}"
 
-	auto_enabled=0
-	[ "$(uci_get "$packageName" 'config' 'auto_update_enabled' '0')" = "1" ] && auto_enabled=1
+	config_load "$packageName"
+	config_get auto_enabled 'config' 'auto_update_enabled' '0'
+	if [ "$auto_enabled" = "1" ]; then
+		auto_enabled=1
+	else
+		auto_enabled=0
+	fi
 
 	cron_init=0
 	cron_bin=0
@@ -174,13 +181,13 @@ get_cron_status() {
 	cron_line_present=0
 	cron_line_match=0
 
-	mode="$(uci_get "$packageName" 'config' 'auto_update_mode' 'daily')"
-	minute="$(uci_get "$packageName" 'config' 'auto_update_minute' '0')"
-	hour="$(uci_get "$packageName" 'config' 'auto_update_hour' '4')"
-	wday="$(uci_get "$packageName" 'config' 'auto_update_weekday' '0')"
-	mday="$(uci_get "$packageName" 'config' 'auto_update_monthday' '1')"
-	ndays="$(uci_get "$packageName" 'config' 'auto_update_every_ndays' '3')"
-	nhours="$(uci_get "$packageName" 'config' 'auto_update_every_nhours' '6')"
+	config_get mode 'config' 'auto_update_mode' 'daily'
+	config_get minute 'config' 'auto_update_minute' '0'
+	config_get hour 'config' 'auto_update_hour' '4'
+	config_get wday 'config' 'auto_update_weekday' '0'
+	config_get mday 'config' 'auto_update_monthday' '1'
+	config_get ndays 'config' 'auto_update_every_ndays' '3'
+	config_get nhours 'config' 'auto_update_every_nhours' '6'
 	dom="*"
 	dow="*"
 	case "$mode" in
