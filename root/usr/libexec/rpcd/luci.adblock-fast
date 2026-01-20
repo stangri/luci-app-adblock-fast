@@ -445,17 +445,17 @@ case "$1" in
 		json_add_object "getInitList"
 			json_add_string 'name' 'name'
 		json_close_object
-	json_add_object "getInitStatus"
-		json_add_string 'name' 'name'
-	json_close_object
-	json_add_object "getCronStatus"
-		json_add_string 'name' 'name'
-	json_close_object
-	json_add_object "getPlatformSupport"
-		json_add_string 'name' 'name'
-	json_close_object
-	json_add_object "setInitAction"
-		json_add_string 'name' 'name'
+		json_add_object "getInitStatus"
+			json_add_string 'name' 'name'
+		json_close_object
+		json_add_object "getCronStatus"
+			json_add_string 'name' 'name'
+		json_close_object
+		json_add_object "getPlatformSupport"
+			json_add_string 'name' 'name'
+		json_close_object
+		json_add_object "setInitAction"
+			json_add_string 'name' 'name'
 			json_add_string 'action' 'action'
 		json_close_object
 		json_dump
