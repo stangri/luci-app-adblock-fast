@@ -358,18 +358,18 @@ var status = baseclass.extend({
 				var enableCronCmd =
 					"<code>/etc/init.d/cron enable && /etc/init.d/cron start</code>";
 				var resyncLabel = "<code>" + _("Resync Cron") + "</code>";
-				if (!reply.cron.cron_init || !reply.cron.cron_bin) {
-					reply.ubus.warnings.push({
-						code: "warningCronMissing",
-						info: enableCronCmd,
-					});
-				} else if (!reply.cron.cron_enabled || !reply.cron.cron_running) {
-					reply.ubus.warnings.push({
-						code: "warningCronDisabled",
-						info: enableCronCmd,
-					});
-				}
 				if (reply.status.enabled && reply.status.running) {
+					if (!reply.cron.cron_init || !reply.cron.cron_bin) {
+						reply.ubus.warnings.push({
+							code: "warningCronMissing",
+							info: enableCronCmd,
+						});
+					} else if (!reply.cron.cron_enabled || !reply.cron.cron_running) {
+						reply.ubus.warnings.push({
+							code: "warningCronDisabled",
+							info: enableCronCmd,
+						});
+					}
 					if (!reply.cron.cron_line_present) {
 						reply.ubus.warnings.push({
 							code: "warningCronEntryMissing",
