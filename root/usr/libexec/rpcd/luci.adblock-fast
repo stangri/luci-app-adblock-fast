@@ -62,7 +62,7 @@ update_cron() {
 
 	if [ -f "$cron_file" ]; then
 		if [ -s "$cron_file" ]; then
-			grep -v -E '/etc/init\.d/adblock-fast[[:space:]]+dl' "$cron_file" > "$tmp_file" || true
+			grep -v -E '/etc/init.d/adblock-fast[[:space:]]+dl' "$cron_file" > "$tmp_file" || true
 		else
 			: > "$tmp_file"
 		fi
@@ -144,6 +144,9 @@ sync_cron() {
 
 get_cron_status() {
 	local name auto_enabled cron_init cron_bin cron_enabled cron_running
+	local cron_line_present cron_line_match
+	local mode minute hour wday mday ndays nhours dom dow
+	local cron_file line line_count match_count
 	name="$(basename "$1")"
 	name="${name:-$packageName}"
 
@@ -168,6 +171,64 @@ get_cron_status() {
 		cron_running=1
 	fi
 
+	cron_line_present=0
+	cron_line_match=0
+
+	mode="$(uci_get "$packageName" 'config' 'auto_update_mode' 'daily')"
+	minute="$(uci_get "$packageName" 'config' 'auto_update_minute' '0')"
+	hour="$(uci_get "$packageName" 'config' 'auto_update_hour' '4')"
+	wday="$(uci_get "$packageName" 'config' 'auto_update_weekday' '0')"
+	mday="$(uci_get "$packageName" 'config' 'auto_update_monthday' '1')"
+	ndays="$(uci_get "$packageName" 'config' 'auto_update_every_ndays' '3')"
+	nhours="$(uci_get "$packageName" 'config' 'auto_update_every_nhours' '6')"
+	dom="*"
+	dow="*"
+	case "$mode" in
+		weekly)
+			dow="$wday"
+			;;
+		monthly)
+			dom="$mday"
+			;;
+		every_n_days)
+			dom="*/$ndays"
+			;;
+		every_n_hours)
+			hour="*/$nhours"
+			;;
+	esac
+
+	cron_file="/etc/crontabs/root"
+	line_count=0
+	match_count=0
+	if [ -s "$cron_file" ]; then
+		set -f
+		while IFS= read -r line; do
+			case "$line" in
+				''|[[:space:]]\#*|\#*) continue ;;
+			esac
+			line_count=$((line_count + 1))
+			set -- $line
+			if [ "${1#@}" != "$1" ]; then
+				continue
+			fi
+			if [ "${6:-}" = "/etc/init.d/$packageName" ] && [ "${7:-}" = "dl" ] && \
+				[ "$1" = "$minute" ] && [ "$2" = "$hour" ] && [ "$3" = "$dom" ] && \
+				[ "$4" = "*" ] && [ "$5" = "$dow" ]; then
+				match_count=$((match_count + 1))
+			fi
+		done <<-EOF
+		$(grep -v -E '^[[:space:]]*#' "$cron_file" | grep -E "/etc/init.d/${packageName}[[:space:]]+dl" 2>/dev/null)
+		EOF
+		set +f
+	fi
+	if [ "$line_count" -gt 0 ]; then
+		cron_line_present=1
+	fi
+	if [ "$line_count" -eq 1 ] && [ "$match_count" -eq 1 ]; then
+		cron_line_match=1
+	fi
+
 	json_init
 	json_add_object "$name"
 	json_add_boolean 'auto_update_enabled' "$auto_enabled"
@@ -175,6 +236,8 @@ get_cron_status() {
 	json_add_boolean 'cron_bin' "$cron_bin"
 	json_add_boolean 'cron_enabled' "$cron_enabled"
 	json_add_boolean 'cron_running' "$cron_running"
+	json_add_boolean 'cron_line_present' "$cron_line_present"
+	json_add_boolean 'cron_line_match' "$cron_line_match"
 	json_close_object
 	json_dump
 	json_cleanup

@@ -512,6 +512,26 @@ msgid ""
 "%s; otherwise install another cron daemon."
 msgstr ""
 
+#: applications/luci-app-adblock-fast/htdocs/luci-static/resources/adblock-fast/status.js:100
+msgid "Cron entry is missing; click %s to recreate it."
+msgstr ""
+
+#: applications/luci-app-adblock-fast/htdocs/luci-static/resources/adblock-fast/status.js:103
+msgid "Cron entry does not match the schedule; click %s to overwrite it."
+msgstr ""
+
+#: applications/luci-app-adblock-fast/htdocs/luci-static/resources/adblock-fast/status.js:551
+msgid "Syncing cron schedule"
+msgstr ""
+
+#: applications/luci-app-adblock-fast/htdocs/luci-static/resources/adblock-fast/status.js:561
+msgid "Failed to sync cron schedule"
+msgstr ""
+
+#: applications/luci-app-adblock-fast/htdocs/luci-static/resources/adblock-fast/status.js:567
+msgid "Resync Cron"
+msgstr ""
+
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/adblock-fast/status.js:86
 msgid "Invalid compressed cache directory '%s'"
 msgstr ""

@@ -96,6 +96,12 @@ var pkg = {
 	warningCronMissing: _(
 		"Cron daemon is not available. If BusyBox crond is present, enable it with: %s; otherwise install another cron daemon."
 	),
+	warningCronEntryMissing: _(
+		"Cron entry is missing; click %s to recreate it."
+	),
+	warningCronEntryMismatch: _(
+		"Cron entry does not match the schedule; click %s to overwrite it."
+	),
 },
 
 	errorTable: {
@@ -322,6 +328,8 @@ var status = baseclass.extend({
 					cron_bin: false,
 					cron_enabled: false,
 					cron_running: false,
+					cron_line_present: false,
+					cron_line_match: false,
 				},
 			};
 
@@ -345,9 +353,11 @@ var status = baseclass.extend({
 					],
 				});
 			}
+			var cronSyncNeeded = false;
 			if (reply.cron.auto_update_enabled) {
 				var enableCronCmd =
 					"<code>/etc/init.d/cron enable && /etc/init.d/cron start</code>";
+				var resyncLabel = "<code>" + _("Resync Cron") + "</code>";
 				if (!reply.cron.cron_init || !reply.cron.cron_bin) {
 					reply.ubus.warnings.push({
 						code: "warningCronMissing",
@@ -358,6 +368,21 @@ var status = baseclass.extend({
 						code: "warningCronDisabled",
 						info: enableCronCmd,
 					});
+				}
+				if (reply.status.enabled && reply.status.running) {
+					if (!reply.cron.cron_line_present) {
+						reply.ubus.warnings.push({
+							code: "warningCronEntryMissing",
+							info: resyncLabel,
+						});
+						cronSyncNeeded = true;
+					} else if (!reply.cron.cron_line_match) {
+						reply.ubus.warnings.push({
+							code: "warningCronEntryMismatch",
+							info: resyncLabel,
+						});
+						cronSyncNeeded = true;
+					}
 				}
 			}
 			var text = "";
@@ -542,6 +567,33 @@ var status = baseclass.extend({
 				_("Redownload")
 			);
 
+			var btn_sync_cron = E(
+				"button",
+				{
+					class: "btn cbi-button cbi-button-apply",
+					disabled: true,
+					click: function (ev) {
+						ui.showModal(null, [
+							E("p", { class: "spinning" }, _("Syncing cron schedule")),
+						]);
+						return syncCron(pkg.Name, "apply").then(
+							function (result) {
+								ui.hideModal();
+								location.reload();
+							},
+							function (error) {
+								ui.hideModal();
+								ui.addNotification(
+									null,
+									E("p", {}, _("Failed to sync cron schedule"))
+								);
+							}
+						);
+					},
+				},
+				_("Resync Cron")
+			);
+
 			var btn_action_pause = E(
 				"button",
 				{
@@ -647,6 +699,9 @@ var status = baseclass.extend({
 				btn_enable.disabled = false;
 				btn_disable.disabled = true;
 			}
+			if (cronSyncNeeded) {
+				btn_sync_cron.disabled = false;
+			}
 
 			var buttonsDiv = [];
 			var buttonsTitle = E(
@@ -654,19 +709,25 @@ var status = baseclass.extend({
 				{ class: "cbi-value-title" },
 				_("Service Control")
 			);
-			var buttonsText = E("div", {}, [
+			var buttonsTextItems = [
 				btn_start,
 				btn_gap,
 				// btn_action_pause,
 				// btn_gap,
 				btn_action_dl,
+			];
+			if (cronSyncNeeded) {
+				buttonsTextItems.push(btn_gap, btn_sync_cron);
+			}
+			buttonsTextItems.push(
 				btn_gap,
 				btn_stop,
 				btn_gap_long,
 				btn_enable,
 				btn_gap,
-				btn_disable,
-			]);
+				btn_disable
+			);
+			var buttonsText = E("div", {}, buttonsTextItems);
 			var buttonsField = E("div", { class: "cbi-value-field" }, buttonsText);
 			if (reply.status.version) {
 				buttonsDiv = E("div", { class: "cbi-value" }, [
