@@ -11,6 +11,7 @@
 					"getFileUrlFilesizes",
 					"getInitList",
 					"getInitStatus",
+					"getCronStatus",
 					"getPlatformSupport"
 				],
 				"service": [
@@ -29,6 +30,7 @@
 			],
 			"ubus": {
 				"luci.adblock-fast": [
+					"syncCron",
 					"setInitAction"
 				]
 			}

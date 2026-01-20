@@ -87,10 +87,22 @@ var pkg = {
 		),
 		warningFreeRamCheckFail: _("Can't detect free RAM"),
 		warningSanityCheckTLD: _("Sanity check discovered TLDs in %s"),
-		warningSanityCheckLeadingDot: _(
-			"Sanity check discovered leading dots in %s"
-		),
-	},
+	warningSanityCheckLeadingDot: _(
+		"Sanity check discovered leading dots in %s"
+	),
+	warningCronDisabled: _(
+		"Cron service is not enabled or running. Enable it with: %s."
+	),
+	warningCronMissing: _(
+		"Cron daemon is not available. If BusyBox crond is present, enable it with: %s; otherwise install another cron daemon."
+	),
+	warningCronEntryMissing: _(
+		"Cron entry is missing; click %s to recreate it."
+	),
+	warningCronEntryMismatch: _(
+		"Cron entry does not match the schedule; click %s to overwrite it."
+	),
+},
 
 	errorTable: {
 		errorConfigValidationFail: _("Config (%s) validation failure!").format(
@@ -159,6 +171,13 @@ var getFileUrlFilesizes = rpc.declare({
 	params: ["name", "url"],
 });
 
+var syncCron = rpc.declare({
+	object: "luci." + pkg.Name,
+	method: "syncCron",
+	params: ["name", "action"],
+	expect: { result: false },
+});
+
 var getInitList = rpc.declare({
 	object: "luci." + pkg.Name,
 	method: "getInitList",
@@ -168,6 +187,12 @@ var getInitList = rpc.declare({
 var getInitStatus = rpc.declare({
 	object: "luci." + pkg.Name,
 	method: "getInitStatus",
+	params: ["name"],
+});
+
+var getCronStatus = rpc.declare({
+	object: "luci." + pkg.Name,
+	method: "getCronStatus",
 	params: ["name"],
 });
 
@@ -268,7 +293,8 @@ var status = baseclass.extend({
 		return Promise.all([
 			L.resolveDefault(getInitStatus(pkg.Name), {}),
 			L.resolveDefault(getServiceInfo(pkg.Name, true), {}),
-		]).then(function ([initStatus, ubusInfo]) {
+			L.resolveDefault(getCronStatus(pkg.Name), {}),
+		]).then(function ([initStatus, ubusInfo, cronStatus]) {
 			var reply = {
 				status: initStatus?.[pkg.Name] || {
 					enabled: false,
@@ -296,6 +322,15 @@ var status = baseclass.extend({
 					errors: [],
 					warnings: [],
 				},
+				cron: cronStatus?.[pkg.Name] || {
+					auto_update_enabled: false,
+					cron_init: false,
+					cron_bin: false,
+					cron_enabled: false,
+					cron_running: false,
+					cron_line_present: false,
+					cron_line_match: false,
+				},
 			};
 
 			if (
@@ -317,6 +352,38 @@ var status = baseclass.extend({
 						"</a>",
 					],
 				});
+			}
+			var cronSyncNeeded = false;
+			if (reply.cron.auto_update_enabled) {
+				var enableCronCmd =
+					"<code>/etc/init.d/cron enable && /etc/init.d/cron start</code>";
+				var resyncLabel = "<code>" + _("Resync Cron") + "</code>";
+				if (reply.status.enabled && reply.status.running) {
+					if (!reply.cron.cron_init || !reply.cron.cron_bin) {
+						reply.ubus.warnings.push({
+							code: "warningCronMissing",
+							info: enableCronCmd,
+						});
+					} else if (!reply.cron.cron_enabled || !reply.cron.cron_running) {
+						reply.ubus.warnings.push({
+							code: "warningCronDisabled",
+							info: enableCronCmd,
+						});
+					}
+					if (!reply.cron.cron_line_present) {
+						reply.ubus.warnings.push({
+							code: "warningCronEntryMissing",
+							info: resyncLabel,
+						});
+						cronSyncNeeded = true;
+					} else if (!reply.cron.cron_line_match) {
+						reply.ubus.warnings.push({
+							code: "warningCronEntryMismatch",
+							info: resyncLabel,
+						});
+						cronSyncNeeded = true;
+					}
+				}
 			}
 			var text = "";
 			var outputFile = reply.status.outputFile;
@@ -500,6 +567,33 @@ var status = baseclass.extend({
 				_("Redownload")
 			);
 
+			var btn_sync_cron = E(
+				"button",
+				{
+					class: "btn cbi-button cbi-button-apply",
+					disabled: true,
+					click: function (ev) {
+						ui.showModal(null, [
+							E("p", { class: "spinning" }, _("Syncing cron schedule")),
+						]);
+						return syncCron(pkg.Name, "apply").then(
+							function (result) {
+								ui.hideModal();
+								location.reload();
+							},
+							function (error) {
+								ui.hideModal();
+								ui.addNotification(
+									null,
+									E("p", {}, _("Failed to sync cron schedule"))
+								);
+							}
+						);
+					},
+				},
+				_("Resync Cron")
+			);
+
 			var btn_action_pause = E(
 				"button",
 				{
@@ -605,6 +699,9 @@ var status = baseclass.extend({
 				btn_enable.disabled = false;
 				btn_disable.disabled = true;
 			}
+			if (cronSyncNeeded) {
+				btn_sync_cron.disabled = false;
+			}
 
 			var buttonsDiv = [];
 			var buttonsTitle = E(
@@ -612,19 +709,25 @@ var status = baseclass.extend({
 				{ class: "cbi-value-title" },
 				_("Service Control")
 			);
-			var buttonsText = E("div", {}, [
+			var buttonsTextItems = [
 				btn_start,
 				btn_gap,
 				// btn_action_pause,
 				// btn_gap,
 				btn_action_dl,
+			];
+			if (cronSyncNeeded) {
+				buttonsTextItems.push(btn_gap, btn_sync_cron);
+			}
+			buttonsTextItems.push(
 				btn_gap,
 				btn_stop,
 				btn_gap_long,
 				btn_enable,
 				btn_gap,
-				btn_disable,
-			]);
+				btn_disable
+			);
+			var buttonsText = E("div", {}, buttonsTextItems);
 			var buttonsField = E("div", { class: "cbi-value-field" }, buttonsText);
 			if (reply.status.version) {
 				buttonsDiv = E("div", { class: "cbi-value" }, [
@@ -658,6 +761,8 @@ return L.Class.extend({
 	pkg: pkg,
 	getInitStatus: getInitStatus,
 	getFileUrlFilesizes: getFileUrlFilesizes,
+	syncCron: syncCron,
+	getCronStatus: getCronStatus,
 	getPlatformSupport: getPlatformSupport,
 	getServiceInfo: getServiceInfo,
 });
