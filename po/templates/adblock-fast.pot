@@ -502,6 +502,16 @@ msgid ""
 "%sREADME%s."
 msgstr ""
 
+#: applications/luci-app-adblock-fast/htdocs/luci-static/resources/adblock-fast/status.js:94
+msgid "Cron service is not enabled or running. Enable it with: %s."
+msgstr ""
+
+#: applications/luci-app-adblock-fast/htdocs/luci-static/resources/adblock-fast/status.js:97
+msgid ""
+"Cron daemon is not available. If BusyBox crond is present, enable it with: "
+"%s; otherwise install another cron daemon."
+msgstr ""
+
 #: applications/luci-app-adblock-fast/htdocs/luci-static/resources/adblock-fast/status.js:86
 msgid "Invalid compressed cache directory '%s'"
 msgstr ""

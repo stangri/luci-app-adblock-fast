@@ -11,6 +11,7 @@
 					"getFileUrlFilesizes",
 					"getInitList",
 					"getInitStatus",
+					"getCronStatus",
 					"getPlatformSupport"
 				],
 				"service": [

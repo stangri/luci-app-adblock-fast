@@ -142,6 +142,44 @@ sync_cron() {
 	fi
 }
 
+get_cron_status() {
+	local name auto_enabled cron_init cron_bin cron_enabled cron_running
+	name="$(basename "$1")"
+	name="${name:-$packageName}"
+
+	auto_enabled=0
+	[ "$(uci_get "$packageName" 'config' 'auto_update_enabled' '0')" = "1" ] && auto_enabled=1
+
+	cron_init=0
+	cron_bin=0
+	cron_enabled=0
+	cron_running=0
+
+	[ -x /etc/init.d/cron ] && cron_init=1
+	if command -v crond >/dev/null 2>&1 || [ -x /usr/sbin/crond ]; then
+		cron_bin=1
+	fi
+	if [ "$cron_init" = "1" ] && /etc/init.d/cron enabled >/dev/null 2>&1; then
+		cron_enabled=1
+	fi
+	if [ "$cron_init" = "1" ] && /etc/init.d/cron status >/dev/null 2>&1; then
+		cron_running=1
+	elif pidof crond >/dev/null 2>&1; then
+		cron_running=1
+	fi
+
+	json_init
+	json_add_object "$name"
+	json_add_boolean 'auto_update_enabled' "$auto_enabled"
+	json_add_boolean 'cron_init' "$cron_init"
+	json_add_boolean 'cron_bin' "$cron_bin"
+	json_add_boolean 'cron_enabled' "$cron_enabled"
+	json_add_boolean 'cron_running' "$cron_running"
+	json_close_object
+	json_dump
+	json_cleanup
+}
+
 get_init_list() {
 	local name
 	name="$(basename "$1")"
@@ -337,14 +375,17 @@ case "$1" in
 		json_add_object "getInitList"
 			json_add_string 'name' 'name'
 		json_close_object
-		json_add_object "getInitStatus"
-			json_add_string 'name' 'name'
-		json_close_object
-		json_add_object "getPlatformSupport"
-			json_add_string 'name' 'name'
-		json_close_object
-		json_add_object "setInitAction"
-			json_add_string 'name' 'name'
+	json_add_object "getInitStatus"
+		json_add_string 'name' 'name'
+	json_close_object
+	json_add_object "getCronStatus"
+		json_add_string 'name' 'name'
+	json_close_object
+	json_add_object "getPlatformSupport"
+		json_add_string 'name' 'name'
+	json_close_object
+	json_add_object "setInitAction"
+		json_add_string 'name' 'name'
 			json_add_string 'action' 'action'
 		json_close_object
 		json_dump
@@ -380,6 +421,13 @@ case "$1" in
 				json_get_var name 'name'
 				json_cleanup
 				get_init_status "$name"
+				;;
+			getCronStatus)
+				read -r input
+				json_load "$input"
+				json_get_var name 'name'
+				json_cleanup
+				get_cron_status "$name"
 				;;
 			getPlatformSupport)
 				read -r input

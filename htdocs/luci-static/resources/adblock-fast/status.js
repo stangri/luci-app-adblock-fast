@@ -87,10 +87,16 @@ var pkg = {
 		),
 		warningFreeRamCheckFail: _("Can't detect free RAM"),
 		warningSanityCheckTLD: _("Sanity check discovered TLDs in %s"),
-		warningSanityCheckLeadingDot: _(
-			"Sanity check discovered leading dots in %s"
-		),
-	},
+	warningSanityCheckLeadingDot: _(
+		"Sanity check discovered leading dots in %s"
+	),
+	warningCronDisabled: _(
+		"Cron service is not enabled or running. Enable it with: %s."
+	),
+	warningCronMissing: _(
+		"Cron daemon is not available. If BusyBox crond is present, enable it with: %s; otherwise install another cron daemon."
+	),
+},
 
 	errorTable: {
 		errorConfigValidationFail: _("Config (%s) validation failure!").format(
@@ -175,6 +181,12 @@ var getInitList = rpc.declare({
 var getInitStatus = rpc.declare({
 	object: "luci." + pkg.Name,
 	method: "getInitStatus",
+	params: ["name"],
+});
+
+var getCronStatus = rpc.declare({
+	object: "luci." + pkg.Name,
+	method: "getCronStatus",
 	params: ["name"],
 });
 
@@ -275,7 +287,8 @@ var status = baseclass.extend({
 		return Promise.all([
 			L.resolveDefault(getInitStatus(pkg.Name), {}),
 			L.resolveDefault(getServiceInfo(pkg.Name, true), {}),
-		]).then(function ([initStatus, ubusInfo]) {
+			L.resolveDefault(getCronStatus(pkg.Name), {}),
+		]).then(function ([initStatus, ubusInfo, cronStatus]) {
 			var reply = {
 				status: initStatus?.[pkg.Name] || {
 					enabled: false,
@@ -303,6 +316,13 @@ var status = baseclass.extend({
 					errors: [],
 					warnings: [],
 				},
+				cron: cronStatus?.[pkg.Name] || {
+					auto_update_enabled: false,
+					cron_init: false,
+					cron_bin: false,
+					cron_enabled: false,
+					cron_running: false,
+				},
 			};
 
 			if (
@@ -324,6 +344,21 @@ var status = baseclass.extend({
 						"</a>",
 					],
 				});
+			}
+			if (reply.cron.auto_update_enabled) {
+				var enableCronCmd =
+					"<code>/etc/init.d/cron enable && /etc/init.d/cron start</code>";
+				if (!reply.cron.cron_init || !reply.cron.cron_bin) {
+					reply.ubus.warnings.push({
+						code: "warningCronMissing",
+						info: enableCronCmd,
+					});
+				} else if (!reply.cron.cron_enabled || !reply.cron.cron_running) {
+					reply.ubus.warnings.push({
+						code: "warningCronDisabled",
+						info: enableCronCmd,
+					});
+				}
 			}
 			var text = "";
 			var outputFile = reply.status.outputFile;
@@ -666,6 +701,7 @@ return L.Class.extend({
 	getInitStatus: getInitStatus,
 	getFileUrlFilesizes: getFileUrlFilesizes,
 	syncCron: syncCron,
+	getCronStatus: getCronStatus,
 	getPlatformSupport: getPlatformSupport,
 	getServiceInfo: getServiceInfo,
 });
