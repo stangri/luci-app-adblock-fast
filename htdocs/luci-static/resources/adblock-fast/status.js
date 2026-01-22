@@ -87,22 +87,22 @@ var pkg = {
 		),
 		warningFreeRamCheckFail: _("Can't detect free RAM"),
 		warningSanityCheckTLD: _("Sanity check discovered TLDs in %s"),
-	warningSanityCheckLeadingDot: _(
-		"Sanity check discovered leading dots in %s"
-	),
-	warningCronDisabled: _(
-		"Cron service is not enabled or running. Enable it with: %s."
-	),
-	warningCronMissing: _(
-		"Cron daemon is not available. If BusyBox crond is present, enable it with: %s; otherwise install another cron daemon."
-	),
-	warningCronEntryMissing: _(
-		"Cron entry is missing; click %s to recreate it."
-	),
-	warningCronEntryMismatch: _(
-		"Cron entry does not match the schedule; click %s to overwrite it."
-	),
-},
+		warningSanityCheckLeadingDot: _(
+			"Sanity check discovered leading dots in %s"
+		),
+		warningCronDisabled: _(
+			"Cron service is not enabled or running. Enable it with: %s."
+		),
+		warningCronMissing: _(
+			"Cron daemon is not available. If BusyBox crond is present, enable it with: %s; otherwise install another cron daemon."
+		),
+		warningCronEntryMissing: _(
+			"Cron entry is missing; click %s to recreate it."
+		),
+		warningCronEntryMismatch: _(
+			"Cron entry does not match the schedule; click %s to overwrite it."
+		),
+	},
 
 	errorTable: {
 		errorConfigValidationFail: _("Config (%s) validation failure!").format(
@@ -678,7 +678,7 @@ var status = baseclass.extend({
 						break;
 					case "statusStopped":
 						btn_start.disabled = false;
-						btn_action_dl.disabled = true;
+						btn_action_dl.disabled = false;
 						btn_action_pause.disabled = true;
 						btn_stop.disabled = true;
 						break;
