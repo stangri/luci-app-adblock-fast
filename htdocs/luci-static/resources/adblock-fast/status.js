@@ -12,7 +12,7 @@ var pkg = {
 		return "adblock-fast";
 	},
 	get LuciCompat() {
-		return 9;
+		return 10;
 	},
 	get ReadmeCompat() {
 		return "";
@@ -89,6 +89,9 @@ var pkg = {
 		warningSanityCheckTLD: _("Sanity check discovered TLDs in %s"),
 		warningSanityCheckLeadingDot: _(
 			"Sanity check discovered leading dots in %s"
+		),
+		warningInvalidDomainsRemoved: _(
+			"Removed %s invalid domain entries from block-list (domains starting with -/./numbers or containing invalid patterns)"
 		),
 		warningCronDisabled: _(
 			"Cron service is not enabled or running. Enable it with: %s."
