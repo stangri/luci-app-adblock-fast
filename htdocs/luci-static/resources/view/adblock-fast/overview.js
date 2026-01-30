@@ -13,13 +13,15 @@ var pkg = adb.pkg;
 
 return view.extend({
 	load: function () {
-		return Promise.all([
-			L.resolveDefault(adb.getFileUrlFilesizes(pkg.Name), {}),
-			L.resolveDefault(adb.getPlatformSupport(pkg.Name), {}),
-			L.resolveDefault(L.uci.load(pkg.Name), {}),
-			L.resolveDefault(L.uci.load("dhcp"), {}),
-			L.resolveDefault(L.uci.load("smartdns"), {}),
-		]);
+		return L.resolveDefault(adb.getCronStatus(pkg.Name), {}).then(function () {
+			return Promise.all([
+				L.resolveDefault(adb.getFileUrlFilesizes(pkg.Name), {}),
+				L.resolveDefault(adb.getPlatformSupport(pkg.Name), {}),
+				L.resolveDefault(L.uci.load(pkg.Name), {}),
+				L.resolveDefault(L.uci.load("dhcp"), {}),
+				L.resolveDefault(L.uci.load("smartdns"), {}),
+			]);
+		});
 	},
 
 	render: function (data) {
