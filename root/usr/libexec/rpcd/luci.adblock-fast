@@ -213,6 +213,9 @@ get_cron_status() {
 	if [ -s "$cron_file" ]; then
 		set -f
 		while IFS= read -r line; do
+			case "$line" in
+				''|[[:space:]]*) continue ;;
+			esac
 			line_count=$((line_count + 1))
 			commented=0
 			line_content="$line"
