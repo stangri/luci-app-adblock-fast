@@ -365,7 +365,11 @@ var status = baseclass.extend({
 				});
 			}
 			var cronSyncNeeded = false;
-			var showCronWarnings = reply.status.enabled && reply.status.running;
+			var showCronWarnings =
+				reply.status.enabled &&
+				reply.status.running &&
+				(reply.cron.auto_update_enabled ||
+					reply.cron.cron_line_state === "suspended");
 			if (showCronWarnings) {
 				var enableCronCmd =
 					"<code>/etc/init.d/cron enable && /etc/init.d/cron start</code>";
