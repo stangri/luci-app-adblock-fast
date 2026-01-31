@@ -216,13 +216,16 @@ get_cron_status() {
 			case "$line" in
 				''|[[:space:]]*) continue ;;
 			esac
-			line_count=$((line_count + 1))
 			commented=0
 			line_content="$line"
 			if printf '%s\n' "$line" | grep -q '^[[:space:]]*#'; then
 				commented=1
 				line_content="$(printf '%s\n' "$line" | sed -e 's/^[[:space:]]*# *//')"
 			fi
+			if ! printf '%s\n' "$line_content" | grep -q -E "/etc/init.d/${packageName}[[:space:]]+dl"; then
+				continue
+			fi
+			line_count=$((line_count + 1))
 			case "$line" in
 				*adblock-fast-auto-disabled*) state="disabled" ;;
 				*adblock-fast-auto-suspended*) state="suspended" ;;
@@ -321,9 +324,7 @@ get_cron_status() {
 				parsed_ndays="$ndays"
 				parsed_nhours="$nhours"
 			fi
-		done <<-EOF
-		$(grep -E "/etc/init.d/${packageName}[[:space:]]+dl" "$cron_file" 2>/dev/null)
-		EOF
+		done < "$cron_file"
 		set +f
 	fi
 	if [ "$line_count" -gt 0 ]; then
