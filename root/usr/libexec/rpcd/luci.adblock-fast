@@ -57,6 +57,7 @@ update_cron() {
 	local cron_file="/etc/crontabs/root"
 	local tmp_file
 	local auto_enabled add_line
+	local base_line active_line disabled_line suspended_line
 
 	tmp_file="$(mktemp /tmp/adblock-fast.cron.XXXXXX)" || return 1
 
@@ -74,52 +75,67 @@ update_cron() {
 
 	config_get auto_enabled 'config' 'auto_update_enabled' '0'
 	add_line=0
-	case "$action" in
-		disable|stop)
-			add_line=0
+
+	local mode minute hour wday mday ndays nhours dom dow
+	config_get mode 'config' 'auto_update_mode' 'daily'
+	config_get minute 'config' 'auto_update_minute' '0'
+	config_get hour 'config' 'auto_update_hour' '4'
+	config_get wday 'config' 'auto_update_weekday' '0'
+	config_get mday 'config' 'auto_update_monthday' '1'
+	config_get ndays 'config' 'auto_update_every_ndays' '3'
+	config_get nhours 'config' 'auto_update_every_nhours' '6'
+	dom="*"
+	dow="*"
+	case "$mode" in
+		weekly)
+			dow="$wday"
 			;;
-		enable)
-			if [ "$auto_enabled" = "1" ] && is_running "$packageName"; then
-				add_line=1
-			fi
+		monthly)
+			dom="$mday"
 			;;
-		start)
-			[ "$auto_enabled" = "1" ] && add_line=1
+		every_n_days)
+			dom="*/$ndays"
 			;;
-		*)
-			if [ "$auto_enabled" = "1" ] && [ "$(is_enabled "$packageName")" = "1" ] && is_running "$packageName"; then
-				add_line=1
-			fi
+		every_n_hours)
+			hour="*/$nhours"
 			;;
 	esac
+	base_line="${minute} ${hour} ${dom} * ${dow} /etc/init.d/${packageName} dl"
+	active_line="${base_line} # adblock-fast-auto"
+	disabled_line="# ${base_line} # adblock-fast-auto-disabled"
+	suspended_line="# ${base_line} # adblock-fast-auto-suspended"
 
-	if [ "$add_line" = "1" ]; then
-		local mode minute hour wday mday ndays nhours dom dow
-		config_get mode 'config' 'auto_update_mode' 'daily'
-		config_get minute 'config' 'auto_update_minute' '0'
-		config_get hour 'config' 'auto_update_hour' '4'
-		config_get wday 'config' 'auto_update_weekday' '0'
-		config_get mday 'config' 'auto_update_monthday' '1'
-		config_get ndays 'config' 'auto_update_every_ndays' '3'
-		config_get nhours 'config' 'auto_update_every_nhours' '6'
-		dom="*"
-		dow="*"
-		case "$mode" in
-			weekly)
-				dow="$wday"
+	if [ "$auto_enabled" = "1" ]; then
+		case "$action" in
+			disable|stop)
+				add_line=2
 				;;
-			monthly)
-				dom="$mday"
+			enable|start)
+				add_line=1
 				;;
-			every_n_days)
-				dom="*/$ndays"
-				;;
-			every_n_hours)
-				hour="*/$nhours"
+			*)
+				if [ "$(is_enabled "$packageName")" = "1" ] && is_running "$packageName"; then
+					add_line=1
+				else
+					add_line=2
+				fi
 				;;
 		esac
-		printf '%s %s %s * %s /etc/init.d/%s dl # adblock-fast-auto\n' "$minute" "$hour" "$dom" "$dow" "$packageName" >> "$tmp_file"
+	else
+		add_line=3
 	fi
+
+	case "$add_line" in
+		1)
+			printf '%s\n' "$active_line" >> "$tmp_file"
+			;;
+		2)
+			printf '%s\n' "$suspended_line" >> "$tmp_file"
+			;;
+		3)
+			printf '%s\n' "$disabled_line" >> "$tmp_file"
+			;;
+	esac
 
 	if mv "$tmp_file" "$cron_file"; then
 		chmod 600 "$cron_file" 2>/dev/null
@@ -146,9 +162,12 @@ sync_cron() {
 
 get_cron_status() {
 	local name auto_enabled cron_init cron_bin cron_enabled cron_running
-	local cron_line_present cron_line_match
+	local cron_line_present cron_line_match cron_multi cron_parse_ok cron_state
 	local mode minute hour wday mday ndays nhours dom dow
 	local cron_file line line_count match_count
+	local parsed_mode parsed_minute parsed_hour parsed_wday parsed_mday parsed_ndays parsed_nhours
+	local parsed_state parsed_ok parsed_dom parsed_dow line_state
+	local active_seen suspended_seen disabled_seen
 	name="$(basename "$1")"
 	name="${name:-$packageName}"
 
@@ -180,30 +199,13 @@ get_cron_status() {
 
 	cron_line_present=0
 	cron_line_match=0
-
-	config_get mode 'config' 'auto_update_mode' 'daily'
-	config_get minute 'config' 'auto_update_minute' '0'
-	config_get hour 'config' 'auto_update_hour' '4'
-	config_get wday 'config' 'auto_update_weekday' '0'
-	config_get mday 'config' 'auto_update_monthday' '1'
-	config_get ndays 'config' 'auto_update_every_ndays' '3'
-	config_get nhours 'config' 'auto_update_every_nhours' '6'
-	dom="*"
-	dow="*"
-	case "$mode" in
-		weekly)
-			dow="$wday"
-			;;
-		monthly)
-			dom="$mday"
-			;;
-		every_n_days)
-			dom="*/$ndays"
-			;;
-		every_n_hours)
-			hour="*/$nhours"
-			;;
-	esac
+	cron_multi=0
+	cron_parse_ok=0
+	cron_state="none"
+	parsed_ok=0
+	active_seen=0
+	suspended_seen=0
+	disabled_seen=0
 
 	cron_file="/etc/crontabs/root"
 	line_count=0
@@ -212,28 +214,184 @@ get_cron_status() {
 		set -f
 		while IFS= read -r line; do
 			case "$line" in
-				''|[[:space:]]\#*|\#*) continue ;;
+				''|[[:space:]]*) continue ;;
 			esac
-			line_count=$((line_count + 1))
-			set -- $line
-			if [ "${1#@}" != "$1" ]; then
+			commented=0
+			line_content="$line"
+			if printf '%s\n' "$line" | grep -q '^[[:space:]]*#'; then
+				commented=1
+				line_content="$(printf '%s\n' "$line" | sed -e 's/^[[:space:]]*# *//')"
+			fi
+			if ! printf '%s\n' "$line_content" | grep -q -E "/etc/init.d/${packageName}[[:space:]]+dl"; then
 				continue
 			fi
-			if [ "${6:-}" = "/etc/init.d/$packageName" ] && [ "${7:-}" = "dl" ] && \
-				[ "$1" = "$minute" ] && [ "$2" = "$hour" ] && [ "$3" = "$dom" ] && \
-				[ "$4" = "*" ] && [ "$5" = "$dow" ]; then
-				match_count=$((match_count + 1))
+			line_count=$((line_count + 1))
+			case "$line" in
+				*adblock-fast-auto-disabled*) state="disabled" ;;
+				*adblock-fast-auto-suspended*) state="suspended" ;;
+				*adblock-fast-auto*)
+					if [ "$commented" = "1" ]; then
+						state="disabled"
+					else
+						state="active"
+					fi
+					;;
+				*)
+					if [ "$commented" = "1" ]; then
+						state="disabled"
+					else
+						state="active"
+					fi
+					;;
+			esac
+			line_state="$state"
+			case "$state" in
+				active) active_seen=1 ;;
+				suspended) suspended_seen=1 ;;
+				disabled) disabled_seen=1 ;;
+			esac
+			set -- $line_content
+			parsed_ok=1
+			if [ "${1#@}" != "$1" ]; then
+				parsed_ok=0
 			fi
-		done <<-EOF
-		$(grep -v -E '^[[:space:]]*#' "$cron_file" | grep -E "/etc/init.d/${packageName}[[:space:]]+dl" 2>/dev/null)
-		EOF
+			if [ "${4:-}" != "*" ] || [ "${6:-}" != "/etc/init.d/$packageName" ] || [ "${7:-}" != "dl" ]; then
+				parsed_ok=0
+			fi
+			minute="${1:-}"
+			hour="${2:-}"
+			dom="${3:-}"
+			dow="${5:-}"
+			mode=""
+			if [ "$parsed_ok" = "1" ]; then
+				case "$minute" in
+					''|*[!0-9]*) parsed_ok=0 ;;
+				esac
+			fi
+			if [ "$parsed_ok" = "1" ]; then
+				if [ "${hour#*/}" != "$hour" ]; then
+					nhours="${hour#*/}"
+					case "$nhours" in
+						''|*[!0-9]*) parsed_ok=0 ;;
+					esac
+					[ "$dom" = "*" ] && [ "$dow" = "*" ] || parsed_ok=0
+					mode="every_n_hours"
+				elif [ "${dom#*/}" != "$dom" ]; then
+					ndays="${dom#*/}"
+					case "$ndays" in
+						''|*[!0-9]*) parsed_ok=0 ;;
+					esac
+					case "$hour" in
+						''|*[!0-9]*) parsed_ok=0 ;;
+					esac
+					[ "$dow" = "*" ] || parsed_ok=0
+					mode="every_n_days"
+				elif [ "$dom" != "*" ]; then
+					case "$dom" in
+						''|*[!0-9]*) parsed_ok=0 ;;
+					esac
+					case "$hour" in
+						''|*[!0-9]*) parsed_ok=0 ;;
+					esac
+					[ "$dow" = "*" ] || parsed_ok=0
+					mode="monthly"
+				elif [ "$dow" != "*" ]; then
+					case "$dow" in
+						''|*[!0-9]*) parsed_ok=0 ;;
+					esac
+					case "$hour" in
+						''|*[!0-9]*) parsed_ok=0 ;;
+					esac
+					mode="weekly"
+				else
+					case "$hour" in
+						''|*[!0-9]*) parsed_ok=0 ;;
+					esac
+					mode="daily"
+				fi
+			fi
+
+			if [ "$parsed_ok" = "1" ]; then
+				match_count=$((match_count + 1))
+				parsed_state="$state"
+				parsed_mode="$mode"
+				parsed_minute="$minute"
+				parsed_hour="$hour"
+				parsed_dom="$dom"
+				parsed_dow="$dow"
+				parsed_wday="$dow"
+				parsed_mday="$dom"
+				parsed_ndays="$ndays"
+				parsed_nhours="$nhours"
+			fi
+		done < "$cron_file"
 		set +f
 	fi
 	if [ "$line_count" -gt 0 ]; then
 		cron_line_present=1
 	fi
-	if [ "$line_count" -eq 1 ] && [ "$match_count" -eq 1 ]; then
+	if [ "$line_count" -eq 0 ]; then
+		cron_state="missing"
+		auto_enabled=0
+		uci_set "$packageName" 'config' 'auto_update_enabled' "$auto_enabled"
+		uci_changes "$packageName" && uci_commit "$packageName"
+	elif [ "$line_count" -gt 1 ]; then
+		cron_multi=1
+		cron_state="multi"
+		if [ "$active_seen" = "1" ] || [ "$suspended_seen" = "1" ]; then
+			auto_enabled=1
+		else
+			auto_enabled=0
+		fi
+		uci_set "$packageName" 'config' 'auto_update_enabled' "$auto_enabled"
+		uci_changes "$packageName" && uci_commit "$packageName"
+	elif [ "$match_count" -eq 1 ]; then
 		cron_line_match=1
+		cron_parse_ok=1
+		cron_state="$parsed_state"
+		case "$parsed_state" in
+			active|suspended)
+				auto_enabled=1
+				;;
+			disabled)
+				auto_enabled=0
+				;;
+		esac
+		uci_set "$packageName" 'config' 'auto_update_enabled' "$auto_enabled"
+		if [ -n "$parsed_mode" ]; then
+			uci_set "$packageName" 'config' 'auto_update_mode' "$parsed_mode"
+		fi
+		if [ -n "$parsed_minute" ]; then
+			uci_set "$packageName" 'config' 'auto_update_minute' "$parsed_minute"
+		fi
+		if [ -n "$parsed_hour" ] && [ "$parsed_mode" != "every_n_hours" ]; then
+			uci_set "$packageName" 'config' 'auto_update_hour' "$parsed_hour"
+		fi
+		if [ "$parsed_mode" = "weekly" ] && [ -n "$parsed_wday" ]; then
+			uci_set "$packageName" 'config' 'auto_update_weekday' "$parsed_wday"
+		fi
+		if [ "$parsed_mode" = "monthly" ] && [ -n "$parsed_mday" ]; then
+			uci_set "$packageName" 'config' 'auto_update_monthday' "$parsed_mday"
+		fi
+		if [ "$parsed_mode" = "every_n_days" ] && [ -n "$parsed_ndays" ]; then
+			uci_set "$packageName" 'config' 'auto_update_every_ndays' "$parsed_ndays"
+		fi
+		if [ "$parsed_mode" = "every_n_hours" ] && [ -n "$parsed_nhours" ]; then
+			uci_set "$packageName" 'config' 'auto_update_every_nhours' "$parsed_nhours"
+		fi
+		uci_changes "$packageName" && uci_commit "$packageName"
+	else
+		cron_state="unsupported"
+		case "$line_state" in
+			active|suspended)
+				auto_enabled=1
+				;;
+			*)
+				auto_enabled=0
+				;;
+		esac
+		uci_set "$packageName" 'config' 'auto_update_enabled' "$auto_enabled"
+		uci_changes "$packageName" && uci_commit "$packageName"
 	fi
 
 	json_init
@@ -245,6 +403,9 @@ get_cron_status() {
 	json_add_boolean 'cron_running' "$cron_running"
 	json_add_boolean 'cron_line_present' "$cron_line_present"
 	json_add_boolean 'cron_line_match' "$cron_line_match"
+	json_add_boolean 'cron_line_multi' "$cron_multi"
+	json_add_boolean 'cron_line_parse_ok' "$cron_parse_ok"
+	json_add_string 'cron_line_state' "$cron_state"
 	json_close_object
 	json_dump
 	json_cleanup
