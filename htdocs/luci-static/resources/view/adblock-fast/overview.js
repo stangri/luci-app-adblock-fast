@@ -153,6 +153,7 @@ return view.extend({
 
 		s1 = m.section(form.NamedSection, "config", pkg.Name);
 		s1.tab("tab_basic", _("Basic Configuration"));
+		s1.tab("tab_schedule", _("List Updates Schedule"));
 		s1.tab("tab_advanced", _("Advanced Configuration"));
 
 		var text = _(
@@ -445,18 +446,7 @@ return view.extend({
 		}
 
 		o = s1.taboption(
-			"tab_advanced",
-			form.ListValue,
-			"config_update_enabled",
-			_("Automatic Config Update"),
-			_("Perform config update before downloading the block/allow-lists."),
-		);
-		o.value("0", _("Disable"));
-		o.value("1", _("Enable"));
-		o.default = "0";
-
-		o = s1.taboption(
-			"tab_advanced",
+			"tab_schedule",
 			form.ListValue,
 			"auto_update_enabled",
 			_("Automatic List Update"),
@@ -471,7 +461,7 @@ return view.extend({
 		};
 
 		o = s1.taboption(
-			"tab_advanced",
+			"tab_schedule",
 			form.ListValue,
 			"auto_update_mode",
 			_("Schedule Type"),
@@ -490,7 +480,79 @@ return view.extend({
 		};
 
 		o = s1.taboption(
-			"tab_advanced",
+			"tab_schedule",
+			form.ListValue,
+			"auto_update_every_ndays",
+			_("Every N days"),
+			_("Run once every N days."),
+		);
+		for (var i = 1; i <= 31; i++) {
+			o.value(String(i), String(i));
+		}
+		o.default = "3";
+		o.depends({ auto_update_enabled: "1", auto_update_mode: "every_n_days" });
+		// Override to use cron data instead of UCI
+		o.cfgvalue = function (section_id) {
+			return cronConfig.auto_update_every_ndays;
+		};
+
+		o = s1.taboption(
+			"tab_schedule",
+			form.ListValue,
+			"auto_update_every_nhours",
+			_("Every N hours"),
+			_("Run once every N hours."),
+		);
+		for (var i = 1; i <= 23; i++) {
+			o.value(String(i), String(i));
+		}
+		o.default = "6";
+		o.depends({ auto_update_enabled: "1", auto_update_mode: "every_n_hours" });
+		// Override to use cron data instead of UCI
+		o.cfgvalue = function (section_id) {
+			return cronConfig.auto_update_every_nhours;
+		};
+
+		o = s1.taboption(
+			"tab_schedule",
+			form.ListValue,
+			"auto_update_weekday",
+			_("Day of Week"),
+			_("Run on the selected weekday."),
+		);
+		o.value("0", _("Sunday"));
+		o.value("1", _("Monday"));
+		o.value("2", _("Tuesday"));
+		o.value("3", _("Wednesday"));
+		o.value("4", _("Thursday"));
+		o.value("5", _("Friday"));
+		o.value("6", _("Saturday"));
+		o.default = "0";
+		o.depends({ auto_update_enabled: "1", auto_update_mode: "weekly" });
+		// Override to use cron data instead of UCI
+		o.cfgvalue = function (section_id) {
+			return cronConfig.auto_update_weekday;
+		};
+
+		o = s1.taboption(
+			"tab_schedule",
+			form.ListValue,
+			"auto_update_monthday",
+			_("Day of Month"),
+			_("Run on the selected day of month."),
+		);
+		for (var i = 1; i <= 31; i++) {
+			o.value(String(i), String(i));
+		}
+		o.default = "1";
+		o.depends({ auto_update_enabled: "1", auto_update_mode: "monthly" });
+		// Override to use cron data instead of UCI
+		o.cfgvalue = function (section_id) {
+			return cronConfig.auto_update_monthday;
+		};
+
+		o = s1.taboption(
+			"tab_schedule",
 			form.ListValue,
 			"auto_update_hour",
 			_("Update Hour"),
@@ -511,7 +573,7 @@ return view.extend({
 		};
 
 		o = s1.taboption(
-			"tab_advanced",
+			"tab_schedule",
 			form.ListValue,
 			"auto_update_minute",
 			_("Update Minute"),
@@ -533,74 +595,13 @@ return view.extend({
 		o = s1.taboption(
 			"tab_advanced",
 			form.ListValue,
-			"auto_update_weekday",
-			_("Day of Week"),
-			_("Run on the selected weekday."),
+			"config_update_enabled",
+			_("Automatic Config Update"),
+			_("Perform config update before downloading the block/allow-lists."),
 		);
-		o.value("0", _("Sunday"));
-		o.value("1", _("Monday"));
-		o.value("2", _("Tuesday"));
-		o.value("3", _("Wednesday"));
-		o.value("4", _("Thursday"));
-		o.value("5", _("Friday"));
-		o.value("6", _("Saturday"));
+		o.value("0", _("Disable"));
+		o.value("1", _("Enable"));
 		o.default = "0";
-		o.depends({ auto_update_enabled: "1", auto_update_mode: "weekly" });
-		// Override to use cron data instead of UCI
-		o.cfgvalue = function (section_id) {
-			return cronConfig.auto_update_weekday;
-		};
-
-		o = s1.taboption(
-			"tab_advanced",
-			form.ListValue,
-			"auto_update_monthday",
-			_("Day of Month"),
-			_("Run on the selected day of month."),
-		);
-		for (var i = 1; i <= 31; i++) {
-			o.value(String(i), String(i));
-		}
-		o.default = "1";
-		o.depends({ auto_update_enabled: "1", auto_update_mode: "monthly" });
-		// Override to use cron data instead of UCI
-		o.cfgvalue = function (section_id) {
-			return cronConfig.auto_update_monthday;
-		};
-
-		o = s1.taboption(
-			"tab_advanced",
-			form.ListValue,
-			"auto_update_every_ndays",
-			_("Every N days"),
-			_("Run once every N days."),
-		);
-		for (var i = 1; i <= 31; i++) {
-			o.value(String(i), String(i));
-		}
-		o.default = "3";
-		o.depends({ auto_update_enabled: "1", auto_update_mode: "every_n_days" });
-		// Override to use cron data instead of UCI
-		o.cfgvalue = function (section_id) {
-			return cronConfig.auto_update_every_ndays;
-		};
-
-		o = s1.taboption(
-			"tab_advanced",
-			form.ListValue,
-			"auto_update_every_nhours",
-			_("Every N hours"),
-			_("Run once every N hours."),
-		);
-		for (var i = 1; i <= 23; i++) {
-			o.value(String(i), String(i));
-		}
-		o.default = "6";
-		o.depends({ auto_update_enabled: "1", auto_update_mode: "every_n_hours" });
-		// Override to use cron data instead of UCI
-		o.cfgvalue = function (section_id) {
-			return cronConfig.auto_update_every_nhours;
-		};
 
 		o = s1.taboption(
 			"tab_advanced",
