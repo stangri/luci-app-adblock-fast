@@ -691,6 +691,9 @@ case "$1" in
 		json_add_object "getInitStatus"
 			json_add_string 'name' 'name'
 		json_close_object
+		json_add_object "getCronStatus"
+			json_add_string 'name' 'name'
+		json_close_object
 		json_add_object "getCronEntry"
 			json_add_string 'name' 'name'
 		json_close_object
@@ -738,6 +741,13 @@ case "$1" in
 				json_get_var name 'name'
 				json_cleanup
 				get_init_status "$name"
+				;;
+			getCronStatus)
+				read -r input
+				json_load "$input"
+				json_get_var name 'name'
+				json_cleanup
+				get_cron_status "$name"
 				;;
 			getCronEntry)
 				read -r input
