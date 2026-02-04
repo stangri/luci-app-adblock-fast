@@ -109,16 +109,15 @@ return view.extend({
 	},
 
 	load: function () {
-		return L.resolveDefault(adb.getCronStatus(pkg.Name), {}).then(function () {
-			return Promise.all([
-				L.resolveDefault(adb.getFileUrlFilesizes(pkg.Name), {}),
-				L.resolveDefault(adb.getPlatformSupport(pkg.Name), {}),
-				L.resolveDefault(adb.getCronEntry(pkg.Name), {}),
-				L.resolveDefault(L.uci.load(pkg.Name), {}),
-				L.resolveDefault(L.uci.load("dhcp"), {}),
-				L.resolveDefault(L.uci.load("smartdns"), {}),
-			]);
-		});
+		return Promise.all([
+			L.resolveDefault(adb.getFileUrlFilesizes(pkg.Name), {}),
+			L.resolveDefault(adb.getPlatformSupport(pkg.Name), {}),
+			L.resolveDefault(adb.getCronEntry(pkg.Name), {}),
+			L.resolveDefault(adb.getCronStatus(pkg.Name), {}),
+			L.resolveDefault(L.uci.load(pkg.Name), {}),
+			L.resolveDefault(L.uci.load("dhcp"), {}),
+			L.resolveDefault(L.uci.load("smartdns"), {}),
+		]);
 	},
 
 	render: function (data) {
@@ -138,9 +137,10 @@ return view.extend({
 			},
 			cronEntry:
 				(data[2] && data[2][pkg.Name] && data[2][pkg.Name]["entry"]) || "",
-			pkg: (!pkg.isObjEmpty(data[3]) && data[3]) || null,
-			dhcp: (!pkg.isObjEmpty(data[4]) && data[4]) || null,
-			smartdns: (!pkg.isObjEmpty(data[5]) && data[5]) || null,
+			cronStatus: (data[3] && data[3][pkg.Name]) || {},
+			pkg: (!pkg.isObjEmpty(data[4]) && data[4]) || null,
+			dhcp: (!pkg.isObjEmpty(data[5]) && data[5]) || null,
+			smartdns: (!pkg.isObjEmpty(data[6]) && data[6]) || null,
 		};
 
 		// Parse cron entry into virtual config values
