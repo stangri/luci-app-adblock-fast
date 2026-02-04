@@ -12,11 +12,108 @@
 var pkg = adb.pkg;
 
 return view.extend({
+	// Helper function to parse cron entry into config values
+	parseCronEntry: function (cronEntry) {
+		if (!cronEntry || cronEntry.trim() === "") {
+			return {
+				auto_update_enabled: "0",
+				auto_update_mode: "daily",
+				auto_update_hour: "4",
+				auto_update_minute: "0",
+				auto_update_weekday: "0",
+				auto_update_monthday: "1",
+				auto_update_every_ndays: "3",
+				auto_update_every_nhours: "6",
+			};
+		}
+
+		// Parse cron format: minute hour dom month dow command
+		var parts = cronEntry.replace(/^#\s*/, "").trim().split(/\s+/);
+		if (parts.length < 6) {
+			return { auto_update_enabled: "0" };
+		}
+
+		var minute = parts[0];
+		var hour = parts[1];
+		var dom = parts[2];
+		var dow = parts[4];
+
+		var config = {
+			auto_update_enabled: cronEntry.trim().startsWith("#") ? "0" : "1",
+			auto_update_minute: minute,
+			auto_update_hour: hour.includes("/") ? hour.split("/")[1] : hour,
+			auto_update_weekday: dow !== "*" ? dow : "0",
+			auto_update_monthday: dom !== "*" && !dom.includes("/") ? dom : "1",
+			auto_update_every_ndays: dom.includes("/") ? dom.split("/")[1] : "3",
+			auto_update_every_nhours: hour.includes("/") ? hour.split("/")[1] : "6",
+		};
+
+		// Determine mode
+		if (hour.includes("/")) {
+			config.auto_update_mode = "every_n_hours";
+		} else if (dom.includes("/")) {
+			config.auto_update_mode = "every_n_days";
+		} else if (dom !== "*") {
+			config.auto_update_mode = "monthly";
+		} else if (dow !== "*") {
+			config.auto_update_mode = "weekly";
+		} else {
+			config.auto_update_mode = "daily";
+		}
+
+		return config;
+	},
+
+	// Helper function to generate cron entry from config values
+	generateCronEntry: function (config) {
+		if (config.auto_update_enabled !== "1") {
+			return "";
+		}
+
+		var minute = config.auto_update_minute || "0";
+		var hour,
+			dom = "*",
+			dow = "*";
+
+		switch (config.auto_update_mode) {
+			case "every_n_hours":
+				hour = "*/" + (config.auto_update_every_nhours || "6");
+				break;
+			case "every_n_days":
+				hour = config.auto_update_hour || "4";
+				dom = "*/" + (config.auto_update_every_ndays || "3");
+				break;
+			case "monthly":
+				hour = config.auto_update_hour || "4";
+				dom = config.auto_update_monthday || "1";
+				break;
+			case "weekly":
+				hour = config.auto_update_hour || "4";
+				dow = config.auto_update_weekday || "0";
+				break;
+			default: // daily
+				hour = config.auto_update_hour || "4";
+				break;
+		}
+
+		return (
+			minute +
+			" " +
+			hour +
+			" " +
+			dom +
+			" * " +
+			dow +
+			" /etc/init.d/adblock-fast dl # adblock-fast-auto"
+		);
+	},
+
 	load: function () {
 		return L.resolveDefault(adb.getCronStatus(pkg.Name), {}).then(function () {
 			return Promise.all([
 				L.resolveDefault(adb.getFileUrlFilesizes(pkg.Name), {}),
 				L.resolveDefault(adb.getPlatformSupport(pkg.Name), {}),
+				L.resolveDefault(adb.getCronEntry(pkg.Name), {}),
 				L.resolveDefault(L.uci.load(pkg.Name), {}),
 				L.resolveDefault(L.uci.load("dhcp"), {}),
 				L.resolveDefault(L.uci.load("smartdns"), {}),
@@ -39,10 +136,16 @@ return view.extend({
 				unbound_installed: false,
 				leds: [],
 			},
-			pkg: (!pkg.isObjEmpty(data[2]) && data[2]) || null,
-			dhcp: (!pkg.isObjEmpty(data[3]) && data[3]) || null,
-			smartdns: (!pkg.isObjEmpty(data[4]) && data[4]) || null,
+			cronEntry:
+				(data[2] && data[2][pkg.Name] && data[2][pkg.Name]["entry"]) || "",
+			pkg: (!pkg.isObjEmpty(data[3]) && data[3]) || null,
+			dhcp: (!pkg.isObjEmpty(data[4]) && data[4]) || null,
+			smartdns: (!pkg.isObjEmpty(data[5]) && data[5]) || null,
 		};
+
+		// Parse cron entry into virtual config values
+		var cronConfig = this.parseCronEntry(reply.cronEntry);
+
 		var status, m, s1, s2, s3, o;
 
 		status = new adb.status();
@@ -362,6 +465,10 @@ return view.extend({
 		o.value("0", _("Disable"));
 		o.value("1", _("Enable"));
 		o.default = "0";
+		// Override to use cron data instead of UCI
+		o.cfgvalue = function (section_id) {
+			return cronConfig.auto_update_enabled;
+		};
 
 		o = s1.taboption(
 			"tab_advanced",
@@ -377,6 +484,10 @@ return view.extend({
 		o.value("every_n_hours", _("Every N hours"));
 		o.default = "daily";
 		o.depends("auto_update_enabled", "1");
+		// Override to use cron data instead of UCI
+		o.cfgvalue = function (section_id) {
+			return cronConfig.auto_update_mode;
+		};
 
 		o = s1.taboption(
 			"tab_advanced",
@@ -394,6 +505,10 @@ return view.extend({
 		o.depends({ auto_update_enabled: "1", auto_update_mode: "weekly" });
 		o.depends({ auto_update_enabled: "1", auto_update_mode: "monthly" });
 		o.depends({ auto_update_enabled: "1", auto_update_mode: "every_n_days" });
+		// Override to use cron data instead of UCI
+		o.cfgvalue = function (section_id) {
+			return cronConfig.auto_update_hour;
+		};
 
 		o = s1.taboption(
 			"tab_advanced",
@@ -410,6 +525,10 @@ return view.extend({
 		}
 		o.default = "0";
 		o.depends("auto_update_enabled", "1");
+		// Override to use cron data instead of UCI
+		o.cfgvalue = function (section_id) {
+			return cronConfig.auto_update_minute;
+		};
 
 		o = s1.taboption(
 			"tab_advanced",
@@ -427,6 +546,10 @@ return view.extend({
 		o.value("6", _("Saturday"));
 		o.default = "0";
 		o.depends({ auto_update_enabled: "1", auto_update_mode: "weekly" });
+		// Override to use cron data instead of UCI
+		o.cfgvalue = function (section_id) {
+			return cronConfig.auto_update_weekday;
+		};
 
 		o = s1.taboption(
 			"tab_advanced",
@@ -440,6 +563,10 @@ return view.extend({
 		}
 		o.default = "1";
 		o.depends({ auto_update_enabled: "1", auto_update_mode: "monthly" });
+		// Override to use cron data instead of UCI
+		o.cfgvalue = function (section_id) {
+			return cronConfig.auto_update_monthday;
+		};
 
 		o = s1.taboption(
 			"tab_advanced",
@@ -453,6 +580,10 @@ return view.extend({
 		}
 		o.default = "3";
 		o.depends({ auto_update_enabled: "1", auto_update_mode: "every_n_days" });
+		// Override to use cron data instead of UCI
+		o.cfgvalue = function (section_id) {
+			return cronConfig.auto_update_every_ndays;
+		};
 
 		o = s1.taboption(
 			"tab_advanced",
@@ -466,6 +597,10 @@ return view.extend({
 		}
 		o.default = "6";
 		o.depends({ auto_update_enabled: "1", auto_update_mode: "every_n_hours" });
+		// Override to use cron data instead of UCI
+		o.cfgvalue = function (section_id) {
+			return cronConfig.auto_update_every_nhours;
+		};
 
 		o = s1.taboption(
 			"tab_advanced",
@@ -678,24 +813,65 @@ return view.extend({
 	},
 
 	handleSave: function (ev) {
-		return this.super("handleSave", [ev]);
+		var map = this.findParent(".cbi-map");
+		if (!map) {
+			return this.super("handleSave", [ev]);
+		}
+
+		// Collect virtual scheduling values
+		var schedulingConfig = {};
+		var schedulingFields = [
+			"auto_update_enabled",
+			"auto_update_mode",
+			"auto_update_hour",
+			"auto_update_minute",
+			"auto_update_weekday",
+			"auto_update_monthday",
+			"auto_update_every_ndays",
+			"auto_update_every_nhours",
+		];
+
+		schedulingFields.forEach(function (fieldName) {
+			var field = map.lookupOption(fieldName, "config");
+			if (field && field.isValid("config")) {
+				schedulingConfig[fieldName] = field.formvalue("config");
+			}
+		});
+
+		// Generate cron entry from config
+		var cronEntry = this.generateCronEntry(schedulingConfig);
+
+		// Save cron entry directly
+		var savePromise = L.resolveDefault(adb.setCronEntry(pkg.Name, cronEntry), {
+			result: false,
+		}).then(function (result) {
+			if (!result || result.result === false) {
+				ui.addNotification(
+					null,
+					E("p", {}, _("Failed to update cron schedule.")),
+				);
+				return Promise.reject(new Error("Failed to update cron schedule"));
+			}
+
+			// Remove scheduling values from UCI before saving
+			schedulingFields.forEach(function (fieldName) {
+				var field = map.lookupOption(fieldName, "config");
+				if (field) {
+					field.remove("config");
+				}
+			});
+
+			// Save the rest of UCI config
+			return Promise.resolve();
+		});
+
+		return savePromise.then(() => {
+			return this.super("handleSave", [ev]);
+		});
 	},
 
 	handleSaveApply: function (ev, mode) {
-		return this.super("handleSave", [ev]).then(function () {
-			var onApplied = function () {
-				L.resolveDefault(adb.syncCron(pkg.Name, "apply"), {
-					result: false,
-				}).then(function (result) {
-					if (!result || result.result === false) {
-						ui.addNotification(
-							null,
-							E("p", {}, _("Failed to update cron schedule.")),
-						);
-					}
-				});
-			};
-			document.addEventListener("uci-applied", onApplied, { once: true });
+		return this.handleSave(ev).then(function () {
 			ui.changes.apply(mode == "0");
 		});
 	},

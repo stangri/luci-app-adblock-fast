@@ -199,6 +199,19 @@ var getCronStatus = rpc.declare({
 	params: ["name"],
 });
 
+var getCronEntry = rpc.declare({
+	object: "luci." + pkg.Name,
+	method: "getCronEntry",
+	params: ["name"],
+});
+
+var setCronEntry = rpc.declare({
+	object: "luci." + pkg.Name,
+	method: "setCronEntry",
+	params: ["name", "entry"],
+	expect: { result: false },
+});
+
 var getPlatformSupport = rpc.declare({
 	object: "luci." + pkg.Name,
 	method: "getPlatformSupport",
@@ -795,6 +808,8 @@ return L.Class.extend({
 	getFileUrlFilesizes: getFileUrlFilesizes,
 	syncCron: syncCron,
 	getCronStatus: getCronStatus,
+	getCronEntry: getCronEntry,
+	setCronEntry: setCronEntry,
 	getPlatformSupport: getPlatformSupport,
 	getServiceInfo: getServiceInfo,
 });

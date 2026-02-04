@@ -160,6 +160,90 @@ sync_cron() {
 	fi
 }
 
+get_cron_entry() {
+	local name cron_file line
+	name="$(basename "$1")"
+	name="${name:-$packageName}"
+	cron_file="/etc/crontabs/root"
+	
+	json_init
+	json_add_object "$name"
+	
+	if [ -s "$cron_file" ]; then
+		set -f
+		while IFS= read -r line; do
+			case "$line" in
+				''|[[:space:]]*) continue ;;
+			esac
+			if printf '%s\n' "$line" | grep -q -E "/etc/init.d/${packageName}[[:space:]]+dl"; then
+				json_add_string 'entry' "$line"
+				break
+			fi
+		done < "$cron_file"
+		set +f
+	else
+		json_add_string 'entry' ''
+	fi
+	
+	json_close_object
+	json_dump
+	json_cleanup
+}
+
+set_cron_entry() {
+	local name cron_entry cron_file temp_file line found
+	name="$(basename "$1")"
+	name="${name:-$packageName}"
+	cron_entry="$2"
+	cron_file="/etc/crontabs/root"
+	temp_file="${cron_file}.tmp"
+	found=0
+	
+	# Ensure directory exists
+	mkdir -p "$(dirname "$cron_file")"
+	
+	# Create temp file
+	touch "$temp_file"
+	
+	if [ -s "$cron_file" ]; then
+		set -f
+		while IFS= read -r line; do
+			case "$line" in
+				''|[[:space:]]*) printf '%s\n' "$line" >> "$temp_file"; continue ;;
+			esac
+			if printf '%s\n' "$line" | grep -q -E "/etc/init.d/${packageName}[[:space:]]+dl"; then
+				# Replace existing entry
+				if [ -n "$cron_entry" ]; then
+					printf '%s\n' "$cron_entry" >> "$temp_file"
+				fi
+				found=1
+			else
+				printf '%s\n' "$line" >> "$temp_file"
+			fi
+		done < "$cron_file"
+		set +f
+	fi
+	
+	# Add new entry if not found and entry is not empty
+	if [ "$found" = "0" ] && [ -n "$cron_entry" ]; then
+		printf '%s\n' "$cron_entry" >> "$temp_file"
+	fi
+	
+	# Replace original file
+	if mv "$temp_file" "$cron_file"; then
+		# Restart cron to pick up changes
+		if [ -x /etc/init.d/cron ] && /etc/init.d/cron enabled >/dev/null 2>&1; then
+			/etc/init.d/cron restart >/dev/null 2>&1
+		elif pidof crond >/dev/null 2>&1; then
+			killall -HUP crond 2>/dev/null
+		fi
+		print_json_bool 'result' '1'
+	else
+		rm -f "$temp_file"
+		print_json_bool 'result' '0'
+	fi
+}
+
 get_cron_status() {
 	local name auto_enabled cron_init cron_bin cron_enabled cron_running
 	local cron_line_present cron_line_match cron_multi cron_parse_ok cron_state
@@ -608,9 +692,18 @@ case "$1" in
 		json_close_object
 		json_add_object "getInitStatus"
 			json_add_string 'name' 'name'
-		json_close_object
-		json_add_object "getCronStatus"
+		json_close_object		json_add_object "getCronEntry"
 			json_add_string 'name' 'name'
+		json_close_object
+		json_add_object "setCronEntry"
+			json_add_string 'name' 'name'
+			json_add_string 'entry' 'entry'
+		json_close_object		json_add_object "getCronEntry"
+			json_add_string 'name' 'name'
+		json_close_object
+		json_add_object "setCronEntry"
+			json_add_string 'name' 'name'
+			json_add_string 'entry' 'entry'
 		json_close_object
 		json_add_object "getPlatformSupport"
 			json_add_string 'name' 'name'
@@ -653,12 +746,20 @@ case "$1" in
 				json_cleanup
 				get_init_status "$name"
 				;;
-			getCronStatus)
+			getCronEntry)
 				read -r input
 				json_load "$input"
 				json_get_var name 'name'
 				json_cleanup
-				get_cron_status "$name"
+				get_cron_entry "$name"
+				;;
+			setCronEntry)
+				read -r input
+				json_load "$input"
+				json_get_var name 'name'
+				json_get_var entry 'entry'
+				json_cleanup
+				set_cron_entry "$name" "$entry"
 				;;
 			getPlatformSupport)
 				read -r input
