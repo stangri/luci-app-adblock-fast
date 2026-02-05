@@ -621,8 +621,27 @@ var status = baseclass.extend({
 						ui.showModal(null, [
 							E("p", { class: "spinning" }, _("Syncing cron schedule")),
 						]);
-						return syncCron(pkg.Name, "apply").then(
+						return L.resolveDefault(getCronEntry(pkg.Name), {}).then(
+							function (response) {
+								var entry =
+									(response?.[pkg.Name] && response[pkg.Name].entry) || "";
+								if (!entry) {
+									return Promise.reject(new Error("No cron entry"));
+								}
+								entry = entry.replace(/^\s*#\s*/, "");
+								entry = entry.replace(
+									/adblock-fast-auto-(suspended|disabled)/g,
+									"adblock-fast-auto",
+								);
+								return L.resolveDefault(setCronEntry(pkg.Name, entry), {
+									result: false,
+								});
+							},
+						).then(
 							function (result) {
+								if (!result || result.result === false) {
+									throw new Error("Failed to update cron schedule");
+								}
 								ui.hideModal();
 								location.reload();
 							},

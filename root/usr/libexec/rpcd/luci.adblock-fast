@@ -190,13 +190,14 @@ get_cron_entry() {
 }
 
 set_cron_entry() {
-	local name cron_entry cron_file temp_file line found
+	local name cron_entry cron_file temp_file line found written
 	name="$(basename "$1")"
 	name="${name:-$packageName}"
 	cron_entry="$2"
 	cron_file="/etc/crontabs/root"
 	temp_file="${cron_file}.tmp"
 	found=0
+	written=0
 	
 	# Ensure directory exists
 	mkdir -p "$(dirname "$cron_file")"
@@ -212,8 +213,9 @@ set_cron_entry() {
 			esac
 			if printf '%s\n' "$line" | grep -q -E "/etc/init.d/${packageName}[[:space:]]+dl"; then
 				# Replace existing entry
-				if [ -n "$cron_entry" ]; then
+				if [ "$written" = "0" ] && [ -n "$cron_entry" ]; then
 					printf '%s\n' "$cron_entry" >> "$temp_file"
+					written=1
 				fi
 				found=1
 			else
@@ -230,6 +232,7 @@ set_cron_entry() {
 	
 	# Replace original file
 	if mv "$temp_file" "$cron_file"; then
+		chmod 600 "$cron_file" 2>/dev/null
 		# Restart cron to pick up changes
 		if [ -x /etc/init.d/cron ] && /etc/init.d/cron enabled >/dev/null 2>&1; then
 			/etc/init.d/cron restart >/dev/null 2>&1

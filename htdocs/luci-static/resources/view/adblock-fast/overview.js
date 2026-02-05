@@ -14,53 +14,94 @@ var pkg = adb.pkg;
 return view.extend({
 	// Helper function to parse cron entry into config values
 	parseCronEntry: function (cronEntry) {
+		var defaults = {
+			auto_update_enabled: "0",
+			auto_update_mode: "daily",
+			auto_update_hour: "4",
+			auto_update_minute: "0",
+			auto_update_weekday: "0",
+			auto_update_monthday: "1",
+			auto_update_every_ndays: "3",
+			auto_update_every_nhours: "6",
+		};
+
 		if (!cronEntry || cronEntry.trim() === "") {
-			return {
-				auto_update_enabled: "0",
-				auto_update_mode: "daily",
-				auto_update_hour: "4",
-				auto_update_minute: "0",
-				auto_update_weekday: "0",
-				auto_update_monthday: "1",
-				auto_update_every_ndays: "3",
-				auto_update_every_nhours: "6",
-			};
+			return defaults;
 		}
 
-		// Parse cron format: minute hour dom month dow command
+		var commented = cronEntry.trim().startsWith("#");
 		var parts = cronEntry.replace(/^#\s*/, "").trim().split(/\s+/);
 		if (parts.length < 6) {
-			return { auto_update_enabled: "0" };
+			return defaults;
 		}
 
 		var minute = parts[0];
 		var hour = parts[1];
 		var dom = parts[2];
+		var month = parts[3];
 		var dow = parts[4];
 
-		var config = {
-			auto_update_enabled: cronEntry.trim().startsWith("#") ? "0" : "1",
-			auto_update_minute: minute,
-			auto_update_hour: hour.includes("/") ? hour.split("/")[1] : hour,
-			auto_update_weekday: dow !== "*" ? dow : "0",
-			auto_update_monthday: dom !== "*" && !dom.includes("/") ? dom : "1",
-			auto_update_every_ndays: dom.includes("/") ? dom.split("/")[1] : "3",
-			auto_update_every_nhours: hour.includes("/") ? hour.split("/")[1] : "6",
+		var isNumber = function (val) {
+			return /^[0-9]+$/.test(val);
+		};
+		var isStep = function (val) {
+			return /^\*\/[0-9]+$/.test(val);
 		};
 
-		// Determine mode
-		if (hour.includes("/")) {
-			config.auto_update_mode = "every_n_hours";
-		} else if (dom.includes("/")) {
-			config.auto_update_mode = "every_n_days";
-		} else if (dom !== "*") {
-			config.auto_update_mode = "monthly";
-		} else if (dow !== "*") {
-			config.auto_update_mode = "weekly";
-		} else {
-			config.auto_update_mode = "daily";
+		if (month !== "*" || !isNumber(minute)) {
+			return defaults;
 		}
 
+		var config = Object.assign({}, defaults, {
+			auto_update_enabled: commented ? "0" : "1",
+			auto_update_minute: minute,
+		});
+
+		if (isStep(hour)) {
+			if (dom !== "*" || dow !== "*") {
+				return defaults;
+			}
+			config.auto_update_mode = "every_n_hours";
+			config.auto_update_every_nhours = hour.split("/")[1];
+			return config;
+		}
+
+		if (!isNumber(hour)) {
+			return defaults;
+		}
+
+		if (isStep(dom)) {
+			if (dow !== "*") {
+				return defaults;
+			}
+			config.auto_update_mode = "every_n_days";
+			config.auto_update_hour = hour;
+			config.auto_update_every_ndays = dom.split("/")[1];
+			return config;
+		}
+
+		if (dom !== "*") {
+			if (!isNumber(dom) || dow !== "*") {
+				return defaults;
+			}
+			config.auto_update_mode = "monthly";
+			config.auto_update_hour = hour;
+			config.auto_update_monthday = dom;
+			return config;
+		}
+
+		if (dow !== "*") {
+			if (!isNumber(dow)) {
+				return defaults;
+			}
+			config.auto_update_mode = "weekly";
+			config.auto_update_hour = hour;
+			config.auto_update_weekday = dow;
+			return config;
+		}
+
+		config.auto_update_mode = "daily";
+		config.auto_update_hour = hour;
 		return config;
 	},
 
