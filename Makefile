@@ -7,10 +7,10 @@ PKG_NAME:=luci-app-adblock-fast
 PKG_LICENSE:=AGPL-3.0-or-later
 PKG_MAINTAINER:=Stan Grishin <stangri@melmac.ca>
 PKG_VERSION:=1.2.1
-PKG_RELEASE:=8
+PKG_RELEASE:=9
 
 LUCI_TITLE:=AdBlock-Fast Web UI
-LUCI_URL:=https://github.com/stangri/luci-app-adblock-fast/
+LUCI_URL:=https://github.com/mossdef-org/luci-app-adblock-fast/
 LUCI_DESCRIPTION:=Provides Web UI for adblock-fast service.
 LUCI_DEPENDS:=+luci-base +adblock-fast +jsonfilter
 

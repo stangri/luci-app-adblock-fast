@@ -191,6 +191,7 @@ return view.extend({
 
 		status = new adb.status();
 		m = new form.Map(pkg.Name, _("AdBlock-Fast - Configuration"));
+		this._map = m;
 
 		s1 = m.section(form.NamedSection, "config", pkg.Name);
 		s1.tab("tab_basic", _("Basic Configuration"));
@@ -355,7 +356,9 @@ return view.extend({
 				} else return "*";
 			};
 			o.write = function (section_id, formvalue) {
-				L.uci.set(pkg.Name, section_id, "dnsmasq_instance", formvalue);
+				if (formvalue !== "+") {
+					L.uci.set(pkg.Name, section_id, "dnsmasq_instance", [formvalue]);
+				}
 			};
 
 			o = s1.taboption(
@@ -418,7 +421,9 @@ return view.extend({
 				} else return "*";
 			};
 			o.write = function (section_id, formvalue) {
-				L.uci.set(pkg.Name, section_id, "smartdns_instance", formvalue);
+				if (formvalue !== "+") {
+					L.uci.set(pkg.Name, section_id, "smartdns_instance", [formvalue]);
+				}
 			};
 
 			o = s1.taboption(
@@ -855,7 +860,7 @@ return view.extend({
 	},
 
 	handleSave: function (ev) {
-		var map = this.findParent(".cbi-map");
+		var map = this._map;
 		if (!map) {
 			return this.super("handleSave", [ev]);
 		}
@@ -874,9 +879,9 @@ return view.extend({
 		];
 
 		schedulingFields.forEach(function (fieldName) {
-			var field = map.lookupOption(fieldName, "config");
-			if (field && field.isValid("config")) {
-				schedulingConfig[fieldName] = field.formvalue("config");
+			var match = map.lookupOption(fieldName, "config");
+			if (match && match[0].isValid("config")) {
+				schedulingConfig[fieldName] = match[0].formvalue("config");
 			}
 		});
 
@@ -897,9 +902,9 @@ return view.extend({
 
 			// Remove scheduling values from UCI before saving
 			schedulingFields.forEach(function (fieldName) {
-				var field = map.lookupOption(fieldName, "config");
-				if (field) {
-					field.remove("config");
+				var match = map.lookupOption(fieldName, "config");
+				if (match) {
+					match[0].remove("config");
 				}
 			});
 
@@ -914,7 +919,7 @@ return view.extend({
 
 	handleSaveApply: function (ev, mode) {
 		return this.handleSave(ev).then(function () {
-			ui.changes.apply(mode == "0");
+			return ui.changes.apply(mode == "0");
 		});
 	},
 });
