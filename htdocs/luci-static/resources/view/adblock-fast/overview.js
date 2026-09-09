@@ -176,6 +176,7 @@ return view.extend({
 
 		// Parse cron entry into virtual config values
 		var cronConfig = this.parseCronEntry(reply.cronEntry);
+		cronConfig.auto_update_enabled = reply.cronStatus.auto_update_enabled ? "1" : "0";
 
 		var queryLogData =
 			(data[5] && data[5][pkg.Name]) || {};
